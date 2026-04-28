@@ -1,16 +1,19 @@
 package main
 
 import (
-	"dademo.fr/loadbalancer-manager/controllers"
-	"dademo.fr/loadbalancer-manager/repositories"
-	"dademo.fr/loadbalancer-manager/services"
+	"dademo.fr/loadbalancer-manager/internal/controllers"
+	appFx "dademo.fr/loadbalancer-manager/internal/fx"
+	"dademo.fr/loadbalancer-manager/internal/repositories"
+	"dademo.fr/loadbalancer-manager/internal/services"
 	"github.com/ipfans/fxlogger"
 	"go.uber.org/fx"
-
-	appFx "dademo.fr/loadbalancer-manager/fx"
 )
 
+// Version is injected at build time with -ldflags.
+var Version = "dev"
+
 func main() {
+	services.NewLogger().Info().Str("version", Version).Msg("Starting application")
 
 	fx.New(
 		fx.WithLogger(fxlogger.WithZerolog(*services.NewLogger())),

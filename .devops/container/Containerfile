@@ -1,0 +1,19 @@
+FROM cgr.dev/chainguard/go:latest AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/home/nonroot/go/pkg/mod \
+    go mod download
+
+COPY . .
+RUN --mount=type=cache,target=/home/nonroot/go/pkg/mod \
+    --mount=type=cache,target=/home/nonroot/.cache/go-build \
+    VERSION="$(tr -d '\n' < VERSION 2>/dev/null || echo dev)" && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-w -s -X main.Version=${VERSION}" -o /app/go-loadbalancer-manager ./cmd/main.go
+
+FROM scratch
+
+COPY --from=builder /app/go-loadbalancer-manager /go-loadbalancer-manager
+
+ENTRYPOINT ["/go-loadbalancer-manager"]

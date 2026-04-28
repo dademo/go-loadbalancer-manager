@@ -3,8 +3,8 @@ package controllers
 import (
 	"context"
 
-	"dademo.fr/loadbalancer-manager/fx"
-	"dademo.fr/loadbalancer-manager/repositories"
+	"dademo.fr/loadbalancer-manager/internal/fx"
+	"dademo.fr/loadbalancer-manager/internal/repositories"
 	"github.com/rs/zerolog"
 )
 
