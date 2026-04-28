@@ -2,7 +2,6 @@ package main
 
 import (
 	"dademo.fr/loadbalancer-manager/internal/controllers"
-	appFx "dademo.fr/loadbalancer-manager/internal/fx"
 	"dademo.fr/loadbalancer-manager/internal/repositories"
 	"dademo.fr/loadbalancer-manager/internal/services"
 	"github.com/ipfans/fxlogger"
@@ -17,7 +16,6 @@ func main() {
 
 	fx.New(
 		fx.WithLogger(fxlogger.WithZerolog(*services.NewLogger())),
-		appFx.Module,
 
 		repositories.Module,
 		services.Module,

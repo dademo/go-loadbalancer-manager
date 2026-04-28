@@ -22,6 +22,7 @@ install-deps: ## Install golangci-lint and verify go tools
 	go install golang.org/x/tools/cmd/goimports@latest
 	go install honnef.co/go/tools/cmd/staticcheck@latest
 	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install github.com/air-verse/air@latest
 
 ##@ Development
 
@@ -50,6 +51,14 @@ audit: ## Scan for vulnerabilities in dependencies
 .PHONY: test
 test: ## Run unit tests
 	go test -v -race ./...
+
+.PHONY: run
+run: tidy ## Run the application directly (use ARGS="foo" for params)
+	go run . $(ARGS)
+
+.PHONY: watch
+watch: ## Run with live-reload (Air)
+	air
 
 .PHONY: version
 version: ## Print resolved build version
