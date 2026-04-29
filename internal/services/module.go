@@ -7,6 +7,7 @@ import (
 var Module = fx.Module("services",
 	fx.Provide(NewLogger),
 	fx.Provide(newHealthService),
+	// GRPC server options providers
 	fx.Provide(
 		fx.Annotate(
 			newMetricsService,
@@ -28,4 +29,8 @@ var Module = fx.Module("services",
 			fx.ResultTags(`group:"grpc_options"`),
 		),
 	),
+	// The GRPC server itself
+	fx.Provide(newGrpcServer),
+	// Invoke the server to ensure it is instantiated and the lifecycle hooks are registered.
+	fx.Invoke(func(*GrpcServerService) {}),
 )

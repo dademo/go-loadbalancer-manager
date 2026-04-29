@@ -1,11 +1,10 @@
-package controllers
+package services
 
 import (
 	"context"
 	"net"
 
 	"dademo.fr/loadbalancer-manager/internal/repositories"
-	"dademo.fr/loadbalancer-manager/internal/services"
 	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
@@ -16,7 +15,7 @@ import (
 type GrpcServerService struct {
 	logger               zerolog.Logger
 	configurationService repositories.AppConfigurationService
-	healthService        services.HealthService
+	healthService        HealthService
 	grpc                 *grpc.Server
 }
 
@@ -24,10 +23,10 @@ func newGrpcServer(
 	logger zerolog.Logger,
 	configurationService repositories.AppConfigurationService,
 	lifecycle fx.Lifecycle,
-	healthService services.HealthService,
+	healthService HealthService,
 	grpcServerOptionsProviders struct {
 		fx.In
-		Options []services.GrpcServerOptionsProvider `group:"grpc_options"`
+		Options []GrpcServerOptionsProvider `group:"grpc_options"`
 	}) (*GrpcServerService, error) {
 
 	grpcServerOptions, err := getGrpcServerOptions(grpcServerOptionsProviders.Options)
@@ -76,7 +75,6 @@ func (g *GrpcServerService) onStart(ctx context.Context) error {
 		return err
 	}
 
-	// TODO
 	g.logger.Info().Str("address", ":50051").Msg("Starting gRPC server")
 
 	// Set the global health status to SERVING
@@ -99,7 +97,7 @@ func (g *GrpcServerService) onStop(ctx context.Context) error {
 	return nil
 }
 
-func getGrpcServerOptions(providers []services.GrpcServerOptionsProvider) ([]grpc.ServerOption, error) {
+func getGrpcServerOptions(providers []GrpcServerOptionsProvider) ([]grpc.ServerOption, error) {
 	var options []grpc.ServerOption
 	for _, provider := range providers {
 		option, err := provider.GetOption()
