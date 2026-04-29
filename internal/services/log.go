@@ -1,16 +1,16 @@
 package services
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
-	"os"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
-func NewLogger() *zerolog.Logger {
+func NewLogger() zerolog.Logger {
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
 		const moduleRoot = "go-loadbalancer-manager/"
 
@@ -27,5 +27,6 @@ func NewLogger() *zerolog.Logger {
 		TimeFormat: time.RFC3339,
 		NoColor:    true,
 	}).With().Caller().Logger()
-	return &logger
+
+	return logger
 }

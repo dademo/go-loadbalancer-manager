@@ -12,10 +12,8 @@ import (
 var Version = "dev"
 
 func main() {
-	services.NewLogger().Info().Str("version", Version).Msg("Starting application")
-
 	fx.New(
-		fx.WithLogger(fxlogger.WithZerolog(*services.NewLogger())),
+		fx.WithLogger(fxlogger.WithZerolog(services.NewLogger())),
 
 		repositories.Module,
 		services.Module,

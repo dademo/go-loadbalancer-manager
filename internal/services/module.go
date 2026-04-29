@@ -6,4 +6,26 @@ import (
 
 var Module = fx.Module("services",
 	fx.Provide(NewLogger),
+	fx.Provide(newHealthService),
+	fx.Provide(
+		fx.Annotate(
+			newMetricsService,
+			fx.As(new(GrpcServerOptionsProvider)),
+			fx.ResultTags(`group:"grpc_options"`),
+		),
+	),
+	fx.Provide(
+		fx.Annotate(
+			newKeepaliveEnforcementPolicyOptionService,
+			fx.As(new(GrpcServerOptionsProvider)),
+			fx.ResultTags(`group:"grpc_options"`),
+		),
+	),
+	fx.Provide(
+		fx.Annotate(
+			newKeepaliveEnforcementPolicyOptionService,
+			fx.As(new(GrpcServerOptionsProvider)),
+			fx.ResultTags(`group:"grpc_options"`),
+		),
+	),
 )

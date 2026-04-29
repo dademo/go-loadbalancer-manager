@@ -5,7 +5,7 @@ import (
 )
 
 var Module = fx.Module("controller",
-	fx.Provide(newGRPCServer),
+	fx.Provide(newGrpcServer),
 	// Invoke the server to ensure it is instantiated and the lifecycle hooks are registered
-	fx.Invoke(func(*GRPCServerService) {}),
+	fx.Invoke(func(*GrpcServerService) {}),
 )
