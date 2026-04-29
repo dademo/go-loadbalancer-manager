@@ -9,18 +9,17 @@ import (
 )
 
 type AppConfiguration struct {
-	OnDownloadIgnoreError bool `yaml:"onDownloadIgnoreError,omitempty"`
 }
 
 type AppConfigurationService struct {
-	logger              *zerolog.Logger
-	cli                 *CLIRepository
+	logger              zerolog.Logger
+	cli                 CLIRepository
 	cachedConfiguration *AppConfiguration
 }
 
-func newConfigurationService(logger *zerolog.Logger, cli *CLIRepository) *AppConfigurationService {
-	return &AppConfigurationService{
-		logger:              logger,
+func newConfigurationService(logger zerolog.Logger, cli CLIRepository) AppConfigurationService {
+	return AppConfigurationService{
+		logger:              logger.With().Str("component", "configuration_service").Logger(),
 		cli:                 cli,
 		cachedConfiguration: nil,
 	}
