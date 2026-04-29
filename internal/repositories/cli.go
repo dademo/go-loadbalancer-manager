@@ -2,13 +2,6 @@ package repositories
 
 import (
 	"flag"
-	"fmt"
-	"os"
-	"path"
-)
-
-const (
-	configurationFileName = "configuration.yaml"
 )
 
 type CLIRepository struct {
@@ -42,19 +35,9 @@ func parseCliArgs() *CLIArgs {
 	var cliArgs CLIArgs
 
 	flag.BoolVar(&cliArgs.isDebug, "debug", false, "Enable debugging")
-	flag.StringVar(&cliArgs.confFilePath, "config", progDefaultConfPath(), "Configuration file path")
+	flag.StringVar(&cliArgs.confFilePath, "config", "", "Configuration file path (optional)")
 
 	flag.Parse()
 
 	return &cliArgs
-}
-
-func progDefaultConfPath() string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to determine current path: %s\n", err)
-		os.Exit(1)
-	}
-
-	return path.Join(cwd, configurationFileName)
 }

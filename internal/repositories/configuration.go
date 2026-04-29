@@ -46,11 +46,11 @@ type HaproxySocketConfiguration struct {
 
 type AppConfigurationService struct {
 	logger              zerolog.Logger
-	cli                 CLIRepository
+	cli                 *CLIRepository
 	cachedConfiguration *AppConfiguration
 }
 
-func newConfigurationService(logger zerolog.Logger, cli CLIRepository) AppConfigurationService {
+func newConfigurationService(logger zerolog.Logger, cli *CLIRepository) AppConfigurationService {
 	return AppConfigurationService{
 		logger:              logger.With().Str("component", "configuration_service").Logger(),
 		cli:                 cli,

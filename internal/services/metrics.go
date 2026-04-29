@@ -22,8 +22,8 @@ type MetricsService struct {
 	stats  map[string]*EndpointStats
 }
 
-func newMetricsService(logger zerolog.Logger) MetricsService {
-	return MetricsService{
+func newMetricsService(logger zerolog.Logger) *MetricsService {
+	return &MetricsService{
 		logger: logger.With().Str("component", "metrics_service").Logger(),
 		mu:     sync.RWMutex{},
 		stats:  make(map[string]*EndpointStats),

@@ -60,7 +60,7 @@ proto: ## Generate protobuf and gRPC Go code
 
 .PHONY: run
 run: tidy ## Run the application directly (use ARGS="foo" for params)
-	go run . $(ARGS)
+	go run ./cmd/main.go $(ARGS)
 
 .PHONY: watch
 watch: ## Run with live-reload (Air)
