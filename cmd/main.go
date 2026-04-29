@@ -6,6 +6,8 @@ import (
 	"dademo.fr/loadbalancer-manager/internal/services"
 	"github.com/ipfans/fxlogger"
 	"go.uber.org/fx"
+
+	_ "github.com/haproxytech/client-native/v6"
 )
 
 // Version is injected at build time with -ldflags.

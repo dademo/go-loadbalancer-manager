@@ -30,8 +30,8 @@ func newMetricsService(logger zerolog.Logger) MetricsService {
 	}
 }
 
-func (m *MetricsService) GetGrpcServerOption() grpc.ServerOption {
-	return grpc.UnaryInterceptor(m.onGrpcRequestReceived)
+func (m *MetricsService) GetOption() (grpc.ServerOption, error) {
+	return grpc.UnaryInterceptor(m.onGrpcRequestReceived), nil
 }
 
 // grpc.UnaryServerInterceptor

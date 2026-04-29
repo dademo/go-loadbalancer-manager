@@ -1,1 +1,8 @@
-null
+grpc:
+  address: ":50051"
+
+haproxy:
+  socket:
+    network: "unix"
+    address: "/var/run/haproxy/admin.sock"
+    timeout: "3s"

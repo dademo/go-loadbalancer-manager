@@ -26,6 +26,22 @@ var embeddedDefaultConfiguration []byte
 var embeddedEnvironmentConfigurations embed.FS
 
 type AppConfiguration struct {
+	Grpc    GrpcConfiguration    `yaml:"grpc"`
+	Haproxy HaproxyConfiguration `yaml:"haproxy"`
+}
+
+type GrpcConfiguration struct {
+	Address string `yaml:"address"`
+}
+
+type HaproxyConfiguration struct {
+	Socket HaproxySocketConfiguration `yaml:"socket"`
+}
+
+type HaproxySocketConfiguration struct {
+	Network string        `yaml:"network"`
+	Address string        `yaml:"address"`
+	Timeout time.Duration `yaml:"timeout"`
 }
 
 type AppConfigurationService struct {

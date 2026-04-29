@@ -7,6 +7,7 @@ import (
 var Module = fx.Module("services",
 	fx.Provide(NewLogger),
 	fx.Provide(newHealthService),
+	fx.Provide(newHaproxyService),
 	// GRPC server options providers
 	fx.Provide(
 		fx.Annotate(
@@ -17,7 +18,7 @@ var Module = fx.Module("services",
 	),
 	fx.Provide(
 		fx.Annotate(
-			newKeepaliveEnforcementPolicyOptionService,
+			newKeepaliveParamsOptionService,
 			fx.As(new(GrpcServerOptionsProvider)),
 			fx.ResultTags(`group:"grpc_options"`),
 		),

@@ -56,26 +56,26 @@ func (g *GrpcServerService) configure(lifecycle fx.Lifecycle) error {
 	reflection.Register(g.grpc)
 
 	// Define the application lifecycle using Fx hooks
-	lifecycle.Append(g.getInitializationFxLifecycleHook())
+	lifecycle.Append(fx.Hook{
+		OnStart: g.onStart,
+		OnStop:  g.onStop,
+	})
 
 	return nil
 }
 
-func (g *GrpcServerService) getInitializationFxLifecycleHook() fx.Hook {
-
-	return fx.Hook{
-		OnStart: g.onStart,
-		OnStop:  g.onStop,
-	}
-}
-
 func (g *GrpcServerService) onStart(ctx context.Context) error {
-	ln, err := net.Listen("tcp", ":50051")
+	configuration, err := g.configurationService.GetConfiguration()
 	if err != nil {
 		return err
 	}
 
-	g.logger.Info().Str("address", ":50051").Msg("Starting gRPC server")
+	ln, err := net.Listen("tcp", configuration.Grpc.Address)
+	if err != nil {
+		return err
+	}
+
+	g.logger.Info().Str("address", configuration.Grpc.Address).Msg("Starting gRPC server")
 
 	// Set the global health status to SERVING
 	g.healthService.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
@@ -95,6 +95,14 @@ func (g *GrpcServerService) onStop(ctx context.Context) error {
 	g.healthService.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 	g.grpc.GracefulStop()
 	return nil
+}
+
+func (g *GrpcServerService) RegisterService(description *grpc.ServiceDesc, implementation any) {
+	g.grpc.RegisterService(description, implementation)
+}
+
+func (g *GrpcServerService) RegisterGrpcService(register func(grpc.ServiceRegistrar)) {
+	register(g.grpc)
 }
 
 func getGrpcServerOptions(providers []GrpcServerOptionsProvider) ([]grpc.ServerOption, error) {

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package loadbalancer.v1;
+
+option go_package = "dademo.fr/loadbalancer-manager/internal/gen/proto/loadbalancer/v1;loadbalancerv1";
+
+message Empty {}
+
+message HaproxyProxyStatus {
+  string name = 1;
+  string status = 2;
+  int64 current = 3;
+  int64 max = 4;
+  int64 total = 5;
+  int64 rate = 6;
+  int64 bytes_in = 7;
+  int64 bytes_out = 8;
+  int64 last_change = 9;
+}
+
+message HaproxyStatusResponse {
+  repeated HaproxyProxyStatus frontends = 1;
+  repeated HaproxyProxyStatus backends = 2;
+}
+
+service HaproxyStatusService {
+  rpc GetStatus(Empty) returns (HaproxyStatusResponse);
+}

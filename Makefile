@@ -23,6 +23,8 @@ install-deps: ## Install golangci-lint and verify go tools
 	go install honnef.co/go/tools/cmd/staticcheck@latest
 	go install golang.org/x/vuln/cmd/govulncheck@latest
 	go install github.com/air-verse/air@latest
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 ##@ Development
 
@@ -51,6 +53,10 @@ audit: ## Scan for vulnerabilities in dependencies
 .PHONY: test
 test: ## Run unit tests
 	go test -v -race ./...
+
+.PHONY: proto
+proto: ## Generate protobuf and gRPC Go code
+	protoc -I. --go_out=. --go_opt=module=dademo.fr/loadbalancer-manager --go-grpc_out=. --go-grpc_opt=module=dademo.fr/loadbalancer-manager api/proto/loadbalancer/v1/haproxy_status.proto
 
 .PHONY: run
 run: tidy ## Run the application directly (use ARGS="foo" for params)
