@@ -89,3 +89,40 @@ clean: ## Clean up local dist artifacts and caches
 	rm -rf $(DIST_DIR)
 	go clean -testcache
 	go clean -cache
+
+##@ Docker Compose (Test Environment)
+
+.PHONY: compose-up
+compose-up: ## Start HAProxy + backends docker-compose environment
+	cd .devops/compose && docker-compose up -d
+
+.PHONY: compose-down
+compose-down: ## Stop and remove all docker-compose services
+	cd .devops/compose && docker-compose down
+
+.PHONY: compose-logs
+compose-logs: ## Stream logs from docker-compose services
+	cd .devops/compose && docker-compose logs -f
+
+.PHONY: compose-ps
+compose-ps: ## Show running docker-compose services
+	cd .devops/compose && docker-compose ps
+
+.PHONY: compose-stats
+compose-stats: ## Open HAProxy stats page (curl)
+	@curl -s http://localhost:8080/stats | head -50
+
+.PHONY: compose-test-lb
+compose-test-lb: ## Test load balancing with 10 requests
+	@echo "Testing load balancing (10 requests)..."
+	@for i in {1..10}; do \
+		echo "\n[Request $$i]"; \
+		curl -s -w "HTTP Status: %{http_code}\n" http://localhost:8080/ | head -20; \
+	done
+
+.PHONY: compose-clean
+compose-clean: ## Remove docker-compose volumes and networks
+	cd .devops/compose && docker-compose down -v
+
+.PHONY: dev-env
+dev-env: compose-up ## Start development environment with HAProxy + backends

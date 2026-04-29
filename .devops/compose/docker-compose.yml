@@ -1,0 +1,126 @@
+version: "3.8"
+
+services:
+  # Backend 1 - Simple HTTP server responding with port info
+  backend-1:
+    image: python:3.11-alpine
+    command: python -m http.server 8001
+    environment:
+      PYTHONUNBUFFERED: 1
+    working_dir: /app
+    networks:
+      - haproxy-internal
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8001",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 2s
+
+  # Backend 2 - Simple HTTP server responding with port info
+  backend-2:
+    image: python:3.11-alpine
+    command: python -m http.server 8002
+    environment:
+      PYTHONUNBUFFERED: 1
+    working_dir: /app
+    networks:
+      - haproxy-internal
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8002",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 2s
+
+  # Backend 3 - Simple HTTP server responding with port info
+  backend-3:
+    image: python:3.11-alpine
+    command: python -m http.server 8003
+    environment:
+      PYTHONUNBUFFERED: 1
+    working_dir: /app
+    networks:
+      - haproxy-internal
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8003",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 2s
+
+  # HAProxy - Load Balancer with stats socket for runtime control
+  haproxy:
+    image: haproxy:2.8-alpine
+    container_name: haproxy
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "50051:50051" # gRPC if needed
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./certs:/etc/ssl/certs:ro
+      - haproxy-socket:/var/run/haproxy
+    networks:
+      - haproxy-internal
+      - host # Allows communication with localhost services
+    depends_on:
+      backend-1:
+        condition: service_healthy
+      backend-2:
+        condition: service_healthy
+      backend-3:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80/stats",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 3s
+    cap_add:
+      - NET_RAW
+    sysctls:
+      - net.ipv4.ip_forward=1
+
+networks:
+  haproxy-internal:
+    driver: bridge
+    name: haproxy-internal
+  host:
+    driver: host
+
+volumes:
+  haproxy-socket:
+    driver: local
