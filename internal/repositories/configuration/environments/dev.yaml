@@ -1,1 +1,5 @@
-
+haproxy:
+  socket:
+    network: "unix"
+    address: "./tmp/haproxy/admin.sock"
+    timeout: "3s"

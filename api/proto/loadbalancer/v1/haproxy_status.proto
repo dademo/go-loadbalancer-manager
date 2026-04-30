@@ -23,6 +23,74 @@ message HaproxyStatusResponse {
   repeated HaproxyProxyStatus backends = 2;
 }
 
+message HaproxyConfiguration {
+  string name = 1;
+  string frontend_name = 2;
+  string frontend_bind_address = 3;
+  uint32 frontend_bind_port = 4;
+  string url = 5;
+  HaproxyLoadBalancingStrategy load_balancing_strategy = 6;
+  string backend_name = 7;
+  repeated HaproxyBackendTarget backends = 8;
+  HaproxyTrafficMode traffic_mode = 9;
+  bool auto_https_redirect = 10;
+  HaproxyTLSConfiguration tls = 11;
+}
+
+message HaproxyBackendTarget {
+  string name = 1;
+  string address = 2;
+  uint32 port = 3;
+  int64 check_interval_seconds = 4;
+}
+
+enum HaproxyTrafficMode {
+  HAPROXY_TRAFFIC_MODE_UNSPECIFIED = 0;
+  HAPROXY_TRAFFIC_MODE_HTTP = 1;
+  HAPROXY_TRAFFIC_MODE_TCP = 2;
+}
+
+enum HaproxyLoadBalancingStrategy {
+  HAPROXY_LOAD_BALANCING_STRATEGY_UNSPECIFIED = 0;
+  HAPROXY_LOAD_BALANCING_STRATEGY_ROUNDROBIN = 1;
+  HAPROXY_LOAD_BALANCING_STRATEGY_LEASTCONN = 2;
+  HAPROXY_LOAD_BALANCING_STRATEGY_SOURCE = 3;
+}
+
+message HaproxyTLSConfiguration {
+  bool enabled = 1;
+  string certificate_path = 2;
+  string private_key_path = 3;
+  string certificate_pem = 4;
+  string private_key_pem = 5;
+  bool skip_backend_tls_verify = 6;
+}
+
+message CreateHaproxyConfigurationRequest {
+  HaproxyConfiguration configuration = 1;
+}
+
+message GetHaproxyConfigurationRequest {
+  string name = 1;
+}
+
+message UpdateHaproxyConfigurationRequest {
+  HaproxyConfiguration configuration = 1;
+}
+
+message DeleteHaproxyConfigurationRequest {
+  string name = 1;
+}
+
+message ListHaproxyConfigurationsResponse {
+  repeated HaproxyConfiguration configurations = 1;
+}
+
 service HaproxyStatusService {
   rpc GetStatus(Empty) returns (HaproxyStatusResponse);
+  rpc CreateConfiguration(CreateHaproxyConfigurationRequest) returns (HaproxyConfiguration);
+  rpc ListConfigurations(Empty) returns (ListHaproxyConfigurationsResponse);
+  rpc GetConfiguration(GetHaproxyConfigurationRequest) returns (HaproxyConfiguration);
+  rpc UpdateConfiguration(UpdateHaproxyConfigurationRequest) returns (HaproxyConfiguration);
+  rpc DeleteConfiguration(DeleteHaproxyConfigurationRequest) returns (Empty);
 }

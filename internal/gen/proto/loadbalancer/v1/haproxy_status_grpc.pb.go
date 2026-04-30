@@ -20,7 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	HaproxyStatusService_GetStatus_FullMethodName = "/loadbalancer.v1.HaproxyStatusService/GetStatus"
+	HaproxyStatusService_GetStatus_FullMethodName           = "/loadbalancer.v1.HaproxyStatusService/GetStatus"
+	HaproxyStatusService_CreateConfiguration_FullMethodName = "/loadbalancer.v1.HaproxyStatusService/CreateConfiguration"
+	HaproxyStatusService_ListConfigurations_FullMethodName  = "/loadbalancer.v1.HaproxyStatusService/ListConfigurations"
+	HaproxyStatusService_GetConfiguration_FullMethodName    = "/loadbalancer.v1.HaproxyStatusService/GetConfiguration"
+	HaproxyStatusService_UpdateConfiguration_FullMethodName = "/loadbalancer.v1.HaproxyStatusService/UpdateConfiguration"
+	HaproxyStatusService_DeleteConfiguration_FullMethodName = "/loadbalancer.v1.HaproxyStatusService/DeleteConfiguration"
 )
 
 // HaproxyStatusServiceClient is the client API for HaproxyStatusService service.
@@ -28,6 +33,11 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type HaproxyStatusServiceClient interface {
 	GetStatus(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HaproxyStatusResponse, error)
+	CreateConfiguration(ctx context.Context, in *CreateHaproxyConfigurationRequest, opts ...grpc.CallOption) (*HaproxyConfiguration, error)
+	ListConfigurations(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListHaproxyConfigurationsResponse, error)
+	GetConfiguration(ctx context.Context, in *GetHaproxyConfigurationRequest, opts ...grpc.CallOption) (*HaproxyConfiguration, error)
+	UpdateConfiguration(ctx context.Context, in *UpdateHaproxyConfigurationRequest, opts ...grpc.CallOption) (*HaproxyConfiguration, error)
+	DeleteConfiguration(ctx context.Context, in *DeleteHaproxyConfigurationRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type haproxyStatusServiceClient struct {
@@ -48,11 +58,66 @@ func (c *haproxyStatusServiceClient) GetStatus(ctx context.Context, in *Empty, o
 	return out, nil
 }
 
+func (c *haproxyStatusServiceClient) CreateConfiguration(ctx context.Context, in *CreateHaproxyConfigurationRequest, opts ...grpc.CallOption) (*HaproxyConfiguration, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HaproxyConfiguration)
+	err := c.cc.Invoke(ctx, HaproxyStatusService_CreateConfiguration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *haproxyStatusServiceClient) ListConfigurations(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListHaproxyConfigurationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListHaproxyConfigurationsResponse)
+	err := c.cc.Invoke(ctx, HaproxyStatusService_ListConfigurations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *haproxyStatusServiceClient) GetConfiguration(ctx context.Context, in *GetHaproxyConfigurationRequest, opts ...grpc.CallOption) (*HaproxyConfiguration, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HaproxyConfiguration)
+	err := c.cc.Invoke(ctx, HaproxyStatusService_GetConfiguration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *haproxyStatusServiceClient) UpdateConfiguration(ctx context.Context, in *UpdateHaproxyConfigurationRequest, opts ...grpc.CallOption) (*HaproxyConfiguration, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HaproxyConfiguration)
+	err := c.cc.Invoke(ctx, HaproxyStatusService_UpdateConfiguration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *haproxyStatusServiceClient) DeleteConfiguration(ctx context.Context, in *DeleteHaproxyConfigurationRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, HaproxyStatusService_DeleteConfiguration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // HaproxyStatusServiceServer is the server API for HaproxyStatusService service.
 // All implementations must embed UnimplementedHaproxyStatusServiceServer
 // for forward compatibility.
 type HaproxyStatusServiceServer interface {
 	GetStatus(context.Context, *Empty) (*HaproxyStatusResponse, error)
+	CreateConfiguration(context.Context, *CreateHaproxyConfigurationRequest) (*HaproxyConfiguration, error)
+	ListConfigurations(context.Context, *Empty) (*ListHaproxyConfigurationsResponse, error)
+	GetConfiguration(context.Context, *GetHaproxyConfigurationRequest) (*HaproxyConfiguration, error)
+	UpdateConfiguration(context.Context, *UpdateHaproxyConfigurationRequest) (*HaproxyConfiguration, error)
+	DeleteConfiguration(context.Context, *DeleteHaproxyConfigurationRequest) (*Empty, error)
 	mustEmbedUnimplementedHaproxyStatusServiceServer()
 }
 
@@ -65,6 +130,21 @@ type UnimplementedHaproxyStatusServiceServer struct{}
 
 func (UnimplementedHaproxyStatusServiceServer) GetStatus(context.Context, *Empty) (*HaproxyStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetStatus not implemented")
+}
+func (UnimplementedHaproxyStatusServiceServer) CreateConfiguration(context.Context, *CreateHaproxyConfigurationRequest) (*HaproxyConfiguration, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateConfiguration not implemented")
+}
+func (UnimplementedHaproxyStatusServiceServer) ListConfigurations(context.Context, *Empty) (*ListHaproxyConfigurationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListConfigurations not implemented")
+}
+func (UnimplementedHaproxyStatusServiceServer) GetConfiguration(context.Context, *GetHaproxyConfigurationRequest) (*HaproxyConfiguration, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetConfiguration not implemented")
+}
+func (UnimplementedHaproxyStatusServiceServer) UpdateConfiguration(context.Context, *UpdateHaproxyConfigurationRequest) (*HaproxyConfiguration, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateConfiguration not implemented")
+}
+func (UnimplementedHaproxyStatusServiceServer) DeleteConfiguration(context.Context, *DeleteHaproxyConfigurationRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteConfiguration not implemented")
 }
 func (UnimplementedHaproxyStatusServiceServer) mustEmbedUnimplementedHaproxyStatusServiceServer() {}
 func (UnimplementedHaproxyStatusServiceServer) testEmbeddedByValue()                              {}
@@ -105,6 +185,96 @@ func _HaproxyStatusService_GetStatus_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HaproxyStatusService_CreateConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateHaproxyConfigurationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HaproxyStatusServiceServer).CreateConfiguration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HaproxyStatusService_CreateConfiguration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HaproxyStatusServiceServer).CreateConfiguration(ctx, req.(*CreateHaproxyConfigurationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HaproxyStatusService_ListConfigurations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HaproxyStatusServiceServer).ListConfigurations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HaproxyStatusService_ListConfigurations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HaproxyStatusServiceServer).ListConfigurations(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HaproxyStatusService_GetConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHaproxyConfigurationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HaproxyStatusServiceServer).GetConfiguration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HaproxyStatusService_GetConfiguration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HaproxyStatusServiceServer).GetConfiguration(ctx, req.(*GetHaproxyConfigurationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HaproxyStatusService_UpdateConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateHaproxyConfigurationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HaproxyStatusServiceServer).UpdateConfiguration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HaproxyStatusService_UpdateConfiguration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HaproxyStatusServiceServer).UpdateConfiguration(ctx, req.(*UpdateHaproxyConfigurationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HaproxyStatusService_DeleteConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteHaproxyConfigurationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HaproxyStatusServiceServer).DeleteConfiguration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HaproxyStatusService_DeleteConfiguration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HaproxyStatusServiceServer).DeleteConfiguration(ctx, req.(*DeleteHaproxyConfigurationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // HaproxyStatusService_ServiceDesc is the grpc.ServiceDesc for HaproxyStatusService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -115,6 +285,26 @@ var HaproxyStatusService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetStatus",
 			Handler:    _HaproxyStatusService_GetStatus_Handler,
+		},
+		{
+			MethodName: "CreateConfiguration",
+			Handler:    _HaproxyStatusService_CreateConfiguration_Handler,
+		},
+		{
+			MethodName: "ListConfigurations",
+			Handler:    _HaproxyStatusService_ListConfigurations_Handler,
+		},
+		{
+			MethodName: "GetConfiguration",
+			Handler:    _HaproxyStatusService_GetConfiguration_Handler,
+		},
+		{
+			MethodName: "UpdateConfiguration",
+			Handler:    _HaproxyStatusService_UpdateConfiguration_Handler,
+		},
+		{
+			MethodName: "DeleteConfiguration",
+			Handler:    _HaproxyStatusService_DeleteConfiguration_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

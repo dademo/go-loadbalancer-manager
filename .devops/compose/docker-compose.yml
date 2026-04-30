@@ -1,15 +1,14 @@
 version: "3.8"
 
 services:
-  # Backend 1 - Simple HTTP server responding with port info
+  # Backends kept in compose for local testing; not declared in haproxy.cfg
   backend-1:
     image: python:3.11-alpine
     command: python -m http.server 8001
     environment:
       PYTHONUNBUFFERED: 1
-    working_dir: /app
-    networks:
-      - haproxy-internal
+    ports:
+      - "18001:8001"
     healthcheck:
       test:
         [
@@ -25,15 +24,13 @@ services:
       retries: 3
       start_period: 2s
 
-  # Backend 2 - Simple HTTP server responding with port info
   backend-2:
     image: python:3.11-alpine
     command: python -m http.server 8002
     environment:
       PYTHONUNBUFFERED: 1
-    working_dir: /app
-    networks:
-      - haproxy-internal
+    ports:
+      - "18002:8002"
     healthcheck:
       test:
         [
@@ -49,15 +46,13 @@ services:
       retries: 3
       start_period: 2s
 
-  # Backend 3 - Simple HTTP server responding with port info
   backend-3:
     image: python:3.11-alpine
     command: python -m http.server 8003
     environment:
       PYTHONUNBUFFERED: 1
-    working_dir: /app
-    networks:
-      - haproxy-internal
+    ports:
+      - "18003:8003"
     healthcheck:
       test:
         [
@@ -73,21 +68,15 @@ services:
       retries: 3
       start_period: 2s
 
-  # HAProxy - Load Balancer with stats socket for runtime control
+  # HAProxy with runtime socket, configured by the app
   haproxy:
     image: haproxy:2.8-alpine
     container_name: haproxy
-    ports:
-      - "8080:80"
-      - "8443:443"
-      - "50051:50051" # gRPC if needed
+    user: "0:0"
+    network_mode: host
     volumes:
-      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
-      - ./certs:/etc/ssl/certs:ro
-      - haproxy-socket:/var/run/haproxy
-    networks:
-      - haproxy-internal
-      - host # Allows communication with localhost services
+      - ${PWD}/.devops/compose/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro,Z
+      - ${PWD}/tmp/haproxy:/var/run/haproxy:Z
     depends_on:
       backend-1:
         condition: service_healthy
@@ -96,31 +85,11 @@ services:
       backend-3:
         condition: service_healthy
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--quiet",
-          "--tries=1",
-          "--spider",
-          "http://localhost:80/stats",
-        ]
+      test: [ "CMD", "test", "-S", "/var/run/haproxy/admin.sock" ]
       interval: 5s
       timeout: 2s
       retries: 3
       start_period: 3s
     cap_add:
+      - NET_BIND_SERVICE
       - NET_RAW
-    sysctls:
-      - net.ipv4.ip_forward=1
-
-networks:
-  haproxy-internal:
-    driver: bridge
-    name: haproxy-internal
-  host:
-    driver: host
-
-volumes:
-  haproxy-socket:
-    driver: local
