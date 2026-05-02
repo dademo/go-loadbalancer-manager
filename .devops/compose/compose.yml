@@ -5,6 +5,7 @@ services:
   backend-1:
     image: python:3.11-alpine
     command: python -m http.server 8001
+    stop_signal: SIGINT
     environment:
       PYTHONUNBUFFERED: 1
     ports:
@@ -17,7 +18,7 @@ services:
           "--quiet",
           "--tries=1",
           "--spider",
-          "http://localhost:8001",
+          "http://127.0.0.1:8001",
         ]
       interval: 5s
       timeout: 2s
@@ -27,6 +28,7 @@ services:
   backend-2:
     image: python:3.11-alpine
     command: python -m http.server 8002
+    stop_signal: SIGINT
     environment:
       PYTHONUNBUFFERED: 1
     ports:
@@ -39,7 +41,7 @@ services:
           "--quiet",
           "--tries=1",
           "--spider",
-          "http://localhost:8002",
+          "http://127.0.0.1:8002",
         ]
       interval: 5s
       timeout: 2s
@@ -49,6 +51,7 @@ services:
   backend-3:
     image: python:3.11-alpine
     command: python -m http.server 8003
+    stop_signal: SIGINT
     environment:
       PYTHONUNBUFFERED: 1
     ports:
@@ -61,7 +64,7 @@ services:
           "--quiet",
           "--tries=1",
           "--spider",
-          "http://localhost:8003",
+          "http://127.0.0.1:8003",
         ]
       interval: 5s
       timeout: 2s
