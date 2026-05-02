@@ -2,9 +2,11 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -39,7 +41,7 @@ type HaproxyService struct {
 	configurationService repositories.AppConfigurationService
 	mu                   sync.RWMutex
 	client               runtime.Runtime
-	configurations       map[string]HaproxyConfiguration
+	configurationFile    string
 }
 
 var (
@@ -90,6 +92,12 @@ var allowedTrafficModes = map[string]struct{}{
 	"tcp":  {},
 }
 
+const (
+	managedBlockStart = "# BEGIN LBM MANAGED CONFIGURATIONS"
+	managedBlockEnd   = "# END LBM MANAGED CONFIGURATIONS"
+	managedConfigLine = "# LBM_CONFIG "
+)
+
 func newHaproxyService(
 	logger zerolog.Logger,
 	configurationService repositories.AppConfigurationService,
@@ -99,7 +107,6 @@ func newHaproxyService(
 		logger:               logger.With().Str("component", "haproxy_service").Logger(),
 		configurationService: configurationService,
 		mu:                   sync.RWMutex{},
-		configurations:       make(map[string]HaproxyConfiguration),
 	}
 
 	lifecycle.Append(fx.Hook{
@@ -143,25 +150,43 @@ func (s *HaproxyService) GetStatus(ctx context.Context) (*HaproxyStatus, error) 
 	return status, nil
 }
 
-func (s *HaproxyService) CreateConfiguration(_ context.Context, configuration HaproxyConfiguration) (HaproxyConfiguration, error) {
+func (s *HaproxyService) CreateConfiguration(ctx context.Context, configuration HaproxyConfiguration) (HaproxyConfiguration, error) {
 	if err := validateConfiguration(configuration); err != nil {
 		return HaproxyConfiguration{}, err
 	}
 
-	key := normalizeConfigurationName(configuration.Name)
+	if _, err := s.getOrCreateClient(ctx); err != nil {
+		return HaproxyConfiguration{}, err
+	}
+
+	key, err := normalizeAndValidateConfigurationName(configuration.Name)
+	if err != nil {
+		return HaproxyConfiguration{}, err
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.configurations[key]; exists {
-		return HaproxyConfiguration{}, fmt.Errorf("configuration %q: %w", configuration.Name, ErrConfigurationExists)
+	configurations, err := s.loadConfigurationsLocked()
+	if err != nil {
+		return HaproxyConfiguration{}, err
+	}
+
+	for _, existing := range configurations {
+		if normalizeConfigurationName(existing.Name) == key {
+			return HaproxyConfiguration{}, fmt.Errorf("configuration %q: %w", configuration.Name, ErrConfigurationExists)
+		}
 	}
 
 	stored := cloneConfiguration(configuration)
 	stored.Name = key
 	stored.LoadBalancing = normalizeLoadBalancingStrategy(stored.LoadBalancing)
 	stored.TrafficMode = normalizeTrafficMode(stored.TrafficMode)
-	s.configurations[key] = stored
+	configurations = append(configurations, stored)
+
+	if err := s.persistAndReloadLocked(configurations); err != nil {
+		return HaproxyConfiguration{}, err
+	}
 
 	return cloneConfiguration(stored), nil
 }
@@ -170,14 +195,19 @@ func (s *HaproxyService) ListConfigurations(_ context.Context) []HaproxyConfigur
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	configurations := make([]HaproxyConfiguration, 0, len(s.configurations))
-	for _, configuration := range s.configurations {
-		configurations = append(configurations, cloneConfiguration(configuration))
+	configurations, err := s.loadConfigurationsLocked()
+	if err != nil {
+		s.logger.Error().Err(err).Msg("Unable to load HAProxy managed configurations")
+		return []HaproxyConfiguration{}
 	}
 
 	sort.Slice(configurations, func(i, j int) bool {
 		return configurations[i].Name < configurations[j].Name
 	})
+
+	for i := range configurations {
+		configurations[i] = cloneConfiguration(configurations[i])
+	}
 
 	return configurations
 }
@@ -191,16 +221,26 @@ func (s *HaproxyService) GetConfiguration(_ context.Context, name string) (Hapro
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	configuration, exists := s.configurations[key]
-	if !exists {
-		return HaproxyConfiguration{}, fmt.Errorf("configuration %q: %w", name, ErrConfigurationNotFound)
+	configurations, err := s.loadConfigurationsLocked()
+	if err != nil {
+		return HaproxyConfiguration{}, err
 	}
 
-	return cloneConfiguration(configuration), nil
+	for _, configuration := range configurations {
+		if normalizeConfigurationName(configuration.Name) == key {
+			return cloneConfiguration(configuration), nil
+		}
+	}
+
+	return HaproxyConfiguration{}, fmt.Errorf("configuration %q: %w", name, ErrConfigurationNotFound)
 }
 
-func (s *HaproxyService) UpdateConfiguration(_ context.Context, configuration HaproxyConfiguration) (HaproxyConfiguration, error) {
+func (s *HaproxyService) UpdateConfiguration(ctx context.Context, configuration HaproxyConfiguration) (HaproxyConfiguration, error) {
 	if err := validateConfiguration(configuration); err != nil {
+		return HaproxyConfiguration{}, err
+	}
+
+	if _, err := s.getOrCreateClient(ctx); err != nil {
 		return HaproxyConfiguration{}, err
 	}
 
@@ -209,7 +249,19 @@ func (s *HaproxyService) UpdateConfiguration(_ context.Context, configuration Ha
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.configurations[key]; !exists {
+	configurations, err := s.loadConfigurationsLocked()
+	if err != nil {
+		return HaproxyConfiguration{}, err
+	}
+
+	index := -1
+	for i, current := range configurations {
+		if normalizeConfigurationName(current.Name) == key {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
 		return HaproxyConfiguration{}, fmt.Errorf("configuration %q: %w", configuration.Name, ErrConfigurationNotFound)
 	}
 
@@ -217,12 +269,20 @@ func (s *HaproxyService) UpdateConfiguration(_ context.Context, configuration Ha
 	updated.Name = key
 	updated.LoadBalancing = normalizeLoadBalancingStrategy(updated.LoadBalancing)
 	updated.TrafficMode = normalizeTrafficMode(updated.TrafficMode)
-	s.configurations[key] = updated
+	configurations[index] = updated
+
+	if err := s.persistAndReloadLocked(configurations); err != nil {
+		return HaproxyConfiguration{}, err
+	}
 
 	return cloneConfiguration(updated), nil
 }
 
-func (s *HaproxyService) DeleteConfiguration(_ context.Context, name string) error {
+func (s *HaproxyService) DeleteConfiguration(ctx context.Context, name string) error {
+	if _, err := s.getOrCreateClient(ctx); err != nil {
+		return err
+	}
+
 	key, err := normalizeAndValidateConfigurationName(name)
 	if err != nil {
 		return err
@@ -231,11 +291,27 @@ func (s *HaproxyService) DeleteConfiguration(_ context.Context, name string) err
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.configurations[key]; !exists {
+	configurations, err := s.loadConfigurationsLocked()
+	if err != nil {
+		return err
+	}
+
+	index := -1
+	for i, configuration := range configurations {
+		if normalizeConfigurationName(configuration.Name) == key {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
 		return fmt.Errorf("configuration %q: %w", name, ErrConfigurationNotFound)
 	}
 
-	delete(s.configurations, key)
+	configurations = append(configurations[:index], configurations[index+1:]...)
+	if err := s.persistAndReloadLocked(configurations); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -246,7 +322,7 @@ func (s *HaproxyService) onStart(ctx context.Context) error {
 		return err
 	}
 
-	s.logger.Info().Msg("HAProxy runtime client initialized")
+	s.logger.Info().Str("configuration_file", s.configurationFile).Msg("HAProxy runtime client initialized")
 	return nil
 }
 
@@ -280,14 +356,213 @@ func (s *HaproxyService) getOrCreateClient(ctx context.Context) (runtime.Runtime
 	if configuration.Haproxy.Socket.Network != "unix" {
 		return nil, fmt.Errorf("unsupported HAProxy socket network %q: client-native runtime only supports unix sockets", configuration.Haproxy.Socket.Network)
 	}
+	if strings.TrimSpace(configuration.Haproxy.Socket.Address) == "" {
+		return nil, fmt.Errorf("invalid haproxy socket address: value is required")
+	}
+	if strings.TrimSpace(configuration.Haproxy.ConfigurationFile) == "" {
+		return nil, fmt.Errorf("invalid haproxy configuration_file: value is required")
+	}
 
-	client, err := runtime.New(ctx, runtimeOptions.Socket(configuration.Haproxy.Socket.Address))
+	client, err := runtime.New(ctx, runtimeOptions.MasterSocket(configuration.Haproxy.Socket.Address))
 	if err != nil {
 		return nil, fmt.Errorf("unable to create HAProxy runtime client: %w", err)
 	}
 
+	s.configurationFile = configuration.Haproxy.ConfigurationFile
 	s.client = client
 	return s.client, nil
+}
+
+func (s *HaproxyService) loadConfigurationsLocked() ([]HaproxyConfiguration, error) {
+	fileContent, err := os.ReadFile(s.configurationFile)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read HAProxy configuration file %q: %w", s.configurationFile, err)
+	}
+
+	start, end, lines := managedBlockBounds(string(fileContent))
+	if start == -1 || end == -1 || start >= end {
+		return []HaproxyConfiguration{}, nil
+	}
+
+	configurations := make([]HaproxyConfiguration, 0)
+	for _, line := range lines[start+1 : end] {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, managedConfigLine) {
+			continue
+		}
+
+		payload := strings.TrimSpace(strings.TrimPrefix(trimmed, managedConfigLine))
+		if payload == "" {
+			continue
+		}
+
+		var configuration HaproxyConfiguration
+		if err := json.Unmarshal([]byte(payload), &configuration); err != nil {
+			return nil, fmt.Errorf("unable to parse managed configuration entry: %w", err)
+		}
+
+		configurations = append(configurations, configuration)
+	}
+
+	return configurations, nil
+}
+
+func (s *HaproxyService) persistAndReloadLocked(configurations []HaproxyConfiguration) error {
+	before, err := os.ReadFile(s.configurationFile)
+	if err != nil {
+		return fmt.Errorf("unable to read HAProxy configuration file %q: %w", s.configurationFile, err)
+	}
+
+	updated, err := mergeManagedBlock(string(before), configurations)
+	if err != nil {
+		return err
+	}
+
+	stat, err := os.Stat(s.configurationFile)
+	if err != nil {
+		return fmt.Errorf("unable to stat HAProxy configuration file %q: %w", s.configurationFile, err)
+	}
+
+	if err := os.WriteFile(s.configurationFile, []byte(updated), stat.Mode().Perm()); err != nil {
+		return fmt.Errorf("unable to write HAProxy configuration file %q: %w", s.configurationFile, err)
+	}
+
+	logs, err := s.client.Reload()
+	if err != nil {
+		_ = os.WriteFile(s.configurationFile, before, stat.Mode().Perm())
+		if rollbackLogs, rollbackErr := s.client.Reload(); rollbackErr != nil {
+			s.logger.Error().Err(rollbackErr).Str("logs", rollbackLogs).Msg("Unable to reload HAProxy after rollback")
+		}
+		return fmt.Errorf("unable to reload HAProxy after configuration update: %w; logs: %s", err, logs)
+	}
+
+	if strings.TrimSpace(logs) != "" {
+		s.logger.Debug().Str("logs", logs).Msg("HAProxy reload output")
+	}
+
+	return nil
+}
+
+func managedBlockBounds(content string) (int, int, []string) {
+	lines := strings.Split(content, "\n")
+	start := -1
+	end := -1
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		switch trimmed {
+		case managedBlockStart:
+			if start == -1 {
+				start = i
+			}
+		case managedBlockEnd:
+			if start != -1 && end == -1 {
+				end = i
+			}
+		}
+	}
+
+	return start, end, lines
+}
+
+func mergeManagedBlock(base string, configurations []HaproxyConfiguration) (string, error) {
+	block, err := renderManagedBlock(configurations)
+	if err != nil {
+		return "", err
+	}
+
+	start, end, lines := managedBlockBounds(base)
+	if start != -1 && end != -1 && start < end {
+		replaced := append([]string{}, lines[:start]...)
+		replaced = append(replaced, strings.Split(block, "\n")...)
+		replaced = append(replaced, lines[end+1:]...)
+		return strings.Join(replaced, "\n"), nil
+	}
+
+	trimmed := strings.TrimRight(base, "\n")
+	if trimmed == "" {
+		return block + "\n", nil
+	}
+
+	return trimmed + "\n\n" + block + "\n", nil
+}
+
+func renderManagedBlock(configurations []HaproxyConfiguration) (string, error) {
+	sorted := make([]HaproxyConfiguration, 0, len(configurations))
+	for _, configuration := range configurations {
+		cloned := cloneConfiguration(configuration)
+		cloned.Name = normalizeConfigurationName(cloned.Name)
+		sorted = append(sorted, cloned)
+	}
+
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Name < sorted[j].Name
+	})
+
+	lines := []string{managedBlockStart}
+	for _, configuration := range sorted {
+		payload, err := json.Marshal(configuration)
+		if err != nil {
+			return "", fmt.Errorf("unable to serialize managed configuration %q: %w", configuration.Name, err)
+		}
+		lines = append(lines, managedConfigLine+string(payload))
+	}
+
+	for _, configuration := range sorted {
+		rendered, err := renderConfigurationSections(configuration)
+		if err != nil {
+			return "", err
+		}
+		lines = append(lines, rendered...)
+	}
+
+	lines = append(lines, managedBlockEnd)
+	return strings.Join(lines, "\n"), nil
+}
+
+func renderConfigurationSections(configuration HaproxyConfiguration) ([]string, error) {
+	trafficMode := normalizeTrafficMode(configuration.TrafficMode)
+	loadBalancing := normalizeLoadBalancingStrategy(configuration.LoadBalancing)
+
+	bindLine := fmt.Sprintf("    bind %s:%d", strings.TrimSpace(configuration.FrontendBindAddress), configuration.FrontendBindPort)
+	if configuration.TLS != nil && configuration.TLS.Enabled {
+		certificatePath := strings.TrimSpace(configuration.TLS.CertificatePath)
+		if certificatePath == "" {
+			return nil, fmt.Errorf("tls.enabled=true requires tls.certificate_path when rendering HAProxy config: %w", ErrInvalidConfiguration)
+		}
+		bindLine = fmt.Sprintf("%s ssl crt %s", bindLine, certificatePath)
+	}
+
+	lines := []string{
+		fmt.Sprintf("frontend %s", configuration.FrontendName),
+		bindLine,
+		fmt.Sprintf("    mode %s", trafficMode),
+		fmt.Sprintf("    default_backend %s", configuration.BackendName),
+	}
+	if configuration.AutoHTTPSRedirect {
+		lines = append(lines, "    http-request redirect scheme https code 301 if !{ ssl_fc }")
+	}
+
+	lines = append(lines,
+		fmt.Sprintf("backend %s", configuration.BackendName),
+		fmt.Sprintf("    mode %s", trafficMode),
+		fmt.Sprintf("    balance %s", loadBalancing),
+	)
+
+	for _, backend := range configuration.Backends {
+		serverLine := fmt.Sprintf(
+			"    server %s %s:%d check inter %ds",
+			backend.Name,
+			strings.TrimSpace(backend.Address),
+			backend.Port,
+			backend.CheckIntervalSecond,
+		)
+		if configuration.TLS != nil && configuration.TLS.SkipBackendTLSVerify {
+			serverLine += " ssl verify none"
+		}
+		lines = append(lines, serverLine)
+	}
+
+	return lines, nil
 }
 
 func mapNativeStat(stat *models.NativeStat) HaproxyProxyStatus {

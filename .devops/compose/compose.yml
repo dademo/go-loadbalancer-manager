@@ -76,6 +76,7 @@ services:
     image: haproxy:2.8-alpine
     container_name: haproxy
     user: "0:0"
+    command: ["-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg", "-S", "/var/run/haproxy/master.sock"]
     network_mode: host
     volumes:
       - ${PWD}/.devops/compose/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro,Z

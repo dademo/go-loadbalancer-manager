@@ -35,7 +35,8 @@ type GrpcConfiguration struct {
 }
 
 type HaproxyConfiguration struct {
-	Socket HaproxySocketConfiguration `yaml:"socket"`
+	ConfigurationFile string                     `yaml:"configuration_file"`
+	Socket            HaproxySocketConfiguration `yaml:"socket"`
 }
 
 type HaproxySocketConfiguration struct {

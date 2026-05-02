@@ -2,7 +2,8 @@ grpc:
   address: ":50051"
 
 haproxy:
+  configuration_file: "/etc/haproxy/haproxy.cfg"
   socket:
     network: "unix"
-    address: "/var/run/haproxy/admin.sock"
+    address: "/var/run/haproxy/master.sock"
     timeout: "3s"

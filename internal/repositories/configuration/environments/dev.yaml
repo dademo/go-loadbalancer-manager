@@ -1,5 +1,6 @@
 haproxy:
+  configuration_file: "./.devops/compose/haproxy.cfg"
   socket:
     network: "unix"
-    address: "./tmp/haproxy/admin.sock"
+    address: "./tmp/haproxy/master.sock"
     timeout: "3s"

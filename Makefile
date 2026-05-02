@@ -67,6 +67,14 @@ run: tidy ## Run the application directly (use ARGS="foo" for params)
 run-dev: tidy ## Run the application directly (use ARGS="foo" for params)
 	LBM_CONFIG_ENV=dev go run ./cmd/main.go $(ARGS)
 
+.PHONY: configure-service
+configure-service: ## Configure and run service locally (use ARGS="--env dev --no-run")
+	./.devops/scripts/configure-service.bash $(ARGS)
+
+.PHONY: test-cases
+test-cases: ## Run functional test cases (requires running service + grpcurl)
+	./.devops/scripts/test-cases.bash $(ARGS)
+
 .PHONY: watch
 watch: ## Run with live-reload (Air)
 	air
@@ -117,8 +125,15 @@ compose-ps: ## Show running $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml se
 	$(COMPOSE_RUNTIME) -f .devops/compose/compose.yml ps
 
 .PHONY: compose-stats
-compose-stats: ## Open HAProxy stats page (curl)
-	@curl -s http://localhost:8080/stats | head -50
+compose-stats: ## Check HAProxy admin socket status (no HTTP /stats by default)
+	@if [ -S ./tmp/haproxy/admin.sock ]; then \
+		echo "HAProxy admin socket is available: ./tmp/haproxy/admin.sock"; \
+		echo "No default HTTP /stats endpoint is configured on :8080."; \
+	else \
+		echo "HAProxy admin socket not found: ./tmp/haproxy/admin.sock"; \
+		echo "Start dependencies first with: make compose-up"; \
+		exit 1; \
+	fi
 
 .PHONY: compose-test-lb
 compose-test-lb: ## Test load balancing with 10 requests

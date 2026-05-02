@@ -31,11 +31,11 @@ This docker-compose configuration creates a complete test environment for the Go
 │  │              │  Load Balancer   │                   │ │
 │  │              │                  │                   │ │
 │  │              │ admin.sock       │ ←─────────────┐   │ │
-│  │              │ :80 (stats)      │               │   │ │
+│  │              │ (socket admin)   │               │   │ │
 │  │              └──────────────────┘               │   │ │
 │  │                                                  │   │ │
 │  └──────────────────────────────────────────────────┼───┘ │
-│           ↓ ports: 8080 (localhost)     │            │
+│           ↓ optional traffic on 8080     │            │
 │                                         │            │
 │    ┌──────────────────────────────┐    │            │
 │    │ Host Network Bridge          │────┘            │
@@ -60,11 +60,9 @@ This docker-compose configuration creates a complete test environment for the Go
 
 - **Image**: `haproxy:2.8-alpine`
 - **Networks**: Internal (`haproxy-internal`) + Host
-- **Exposed Ports**:
-  - `8080`: HTTP stats page (localhost:8080/stats)
-  - `8443`: HTTPS (if certificates added)
-  - `50051`: gRPC (if needed)
-- **Admin Socket**: `/var/run/haproxy/admin.sock`
+- **Admin Socket**: `/var/run/haproxy/admin.sock` (configured by default)
+- **HTTP Listener**: Created dynamically by the Go service (example: `http://localhost:8080/`)
+- **Stats Page**: No default HTTP `/stats` endpoint in `.devops/compose/haproxy.cfg`
 - **Load Balancing**: Round-robin across 3 backends
 - **Health Checks**: HTTP health checks on backends
 
@@ -85,17 +83,16 @@ docker-compose ps
 
 Should show all 4 services (3 backends + haproxy) as healthy.
 
-### 3. Check HAProxy Stats
-
-Open in browser or curl:
+### 3. Check HAProxy Admin Socket
 
 ```bash
-curl http://localhost:8080/stats
+make compose-stats
 ```
 
 ### 4. Test Load Balancing
 
 ```bash
+# First create a frontend/backend configuration via gRPC (for example: make test-cases)
 # Test round-robin load balancing
 for i in {1..10}; do
   curl http://localhost:8080/ | head -20
@@ -167,7 +164,7 @@ stats socket 0.0.0.0:9001 level admin
 See `haproxy.cfg` for details:
 
 - **Global Settings**: Logging, socket configuration, performance tuning
-- **Stats Page**: HTTP interface on port 80 (`/stats`)
+- **Admin Access**: Runtime admin socket (`/var/run/haproxy/admin.sock`)
 - **Frontend**: HTTP entry point
 - **Backend Pool**: Round-robin load balancing across 3 servers
 - **Health Checks**: HTTP checks every 5 seconds
