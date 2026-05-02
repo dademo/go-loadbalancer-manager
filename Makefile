@@ -19,13 +19,14 @@ help: ## Display this help menu
 
 .PHONY: install-deps
 install-deps: ## Install golangci-lint and verify go tools
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 	go install golang.org/x/tools/cmd/goimports@latest
 	go install honnef.co/go/tools/cmd/staticcheck@latest
 	go install golang.org/x/vuln/cmd/govulncheck@latest
 	go install github.com/air-verse/air@latest
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	golangci-lint version
 
 ##@ Development
 
@@ -37,15 +38,15 @@ tidy: ## Format code and tidy dependencies
 
 .PHONY: lint
 lint: ## Run golangci-lint
-	golangci-lint run ./...
+	golangci-lint run --config .golangci.yml ./...
 
 .PHONY: lint-fix
 lint-fix: ## Run golangci-lint and auto-fix issues
-	golangci-lint run --fix ./...
+	golangci-lint run --config .golangci.yml --fix ./...
 
 .PHONY: check
 check: ## Run only staticcheck for deep analysis
-	golangci-lint run --disable-all -E staticcheck ./...
+	golangci-lint run --config .golangci.yml --enable-only staticcheck ./...
 
 .PHONY: audit
 audit: ## Scan for vulnerabilities in dependencies

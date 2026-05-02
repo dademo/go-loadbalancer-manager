@@ -6,14 +6,16 @@ run:
 linters:
   enable:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
     - unused
     - revive
-    - gofmt
     - misspell
+
+formatters:
+  enable:
+    - gofmt
 
 issues:
   max-issues-per-linter: 0
