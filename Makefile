@@ -63,9 +63,16 @@ proto: ## Generate protobuf and gRPC Go code
 run: tidy ## Run the application directly (use ARGS="foo" for params)
 	go run ./cmd/main.go $(ARGS)
 
+.PHONY: run-dev
+run-dev: tidy ## Run the application directly (use ARGS="foo" for params)
+	LBM_CONFIG_ENV=dev go run ./cmd/main.go $(ARGS)
+
 .PHONY: watch
 watch: ## Run with live-reload (Air)
 	air
+
+.PHONY: dev-local
+dev-local: compose-up watch ## Start development environment with HAProxy + backends and run the app in dev mode with air
 
 .PHONY: version
 version: ## Print resolved build version
@@ -124,8 +131,3 @@ compose-test-lb: ## Test load balancing with 10 requests
 .PHONY: compose-clean
 compose-clean: ## Remove $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml volumes and networks
 	$(COMPOSE_RUNTIME) -f .devops/compose/compose.yml down -v
-
-.PHONY: dev-env
-dev-env: compose-up ## Start development environment with HAProxy + backends
-
-.PHONY: dev-env-
