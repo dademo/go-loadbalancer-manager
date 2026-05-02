@@ -19,11 +19,13 @@ import (
 	"go.uber.org/fx"
 )
 
+// HaproxyStatus contains grouped HAProxy runtime stats.
 type HaproxyStatus struct {
 	Frontends []HaproxyProxyStatus `json:"frontends"`
 	Backends  []HaproxyProxyStatus `json:"backends"`
 }
 
+// HaproxyProxyStatus represents runtime metrics for a frontend or backend.
 type HaproxyProxyStatus struct {
 	Name       string `json:"name"`
 	Status     string `json:"status"`
@@ -36,6 +38,7 @@ type HaproxyProxyStatus struct {
 	LastChange int64  `json:"last_change"`
 }
 
+// HaproxyService manages HAProxy runtime operations and managed configurations.
 type HaproxyService struct {
 	logger               zerolog.Logger
 	configurationService repositories.AppConfigurationService
@@ -45,12 +48,17 @@ type HaproxyService struct {
 }
 
 var (
-	ErrConfigurationNotFound   = errors.New("haproxy configuration not found")
-	ErrConfigurationExists     = errors.New("haproxy configuration already exists")
-	ErrInvalidConfiguration    = errors.New("invalid haproxy configuration")
+	// ErrConfigurationNotFound indicates a requested managed configuration does not exist.
+	ErrConfigurationNotFound = errors.New("haproxy configuration not found")
+	// ErrConfigurationExists indicates a configuration with the same name already exists.
+	ErrConfigurationExists = errors.New("haproxy configuration already exists")
+	// ErrInvalidConfiguration indicates the provided configuration content is invalid.
+	ErrInvalidConfiguration = errors.New("invalid haproxy configuration")
+	// ErrInvalidConfigurationKey indicates the provided configuration key or name is invalid.
 	ErrInvalidConfigurationKey = errors.New("invalid haproxy configuration key")
 )
 
+// HaproxyConfiguration defines one managed frontend/backend HAProxy configuration.
 type HaproxyConfiguration struct {
 	Name                string                   `json:"name"`
 	FrontendName        string                   `json:"frontend_name"`
@@ -65,6 +73,7 @@ type HaproxyConfiguration struct {
 	TLS                 *HaproxyTLSConfiguration `json:"tls,omitempty"`
 }
 
+// HaproxyBackendTarget defines one backend server target.
 type HaproxyBackendTarget struct {
 	Name                string `json:"name"`
 	Address             string `json:"address"`
@@ -72,6 +81,7 @@ type HaproxyBackendTarget struct {
 	CheckIntervalSecond int64  `json:"check_interval_seconds"`
 }
 
+// HaproxyTLSConfiguration defines TLS options for frontend and backend handling.
 type HaproxyTLSConfiguration struct {
 	Enabled              bool   `json:"enabled"`
 	CertificatePath      string `json:"certificate_path"`
@@ -117,6 +127,7 @@ func newHaproxyService(
 	return service
 }
 
+// GetStatus returns runtime status for HAProxy frontends and backends.
 func (s *HaproxyService) GetStatus(ctx context.Context) (*HaproxyStatus, error) {
 	client, err := s.getOrCreateClient(ctx)
 	if err != nil {
@@ -150,6 +161,7 @@ func (s *HaproxyService) GetStatus(ctx context.Context) (*HaproxyStatus, error) 
 	return status, nil
 }
 
+// CreateConfiguration validates and persists a new managed HAProxy configuration.
 func (s *HaproxyService) CreateConfiguration(ctx context.Context, configuration HaproxyConfiguration) (HaproxyConfiguration, error) {
 	if err := validateConfiguration(configuration); err != nil {
 		return HaproxyConfiguration{}, err
@@ -191,6 +203,7 @@ func (s *HaproxyService) CreateConfiguration(ctx context.Context, configuration 
 	return cloneConfiguration(stored), nil
 }
 
+// ListConfigurations returns all managed HAProxy configurations ordered by name.
 func (s *HaproxyService) ListConfigurations(_ context.Context) []HaproxyConfiguration {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -212,6 +225,7 @@ func (s *HaproxyService) ListConfigurations(_ context.Context) []HaproxyConfigur
 	return configurations
 }
 
+// GetConfiguration returns a managed HAProxy configuration by name.
 func (s *HaproxyService) GetConfiguration(_ context.Context, name string) (HaproxyConfiguration, error) {
 	key, err := normalizeAndValidateConfigurationName(name)
 	if err != nil {
@@ -235,6 +249,7 @@ func (s *HaproxyService) GetConfiguration(_ context.Context, name string) (Hapro
 	return HaproxyConfiguration{}, fmt.Errorf("configuration %q: %w", name, ErrConfigurationNotFound)
 }
 
+// UpdateConfiguration validates and persists changes to an existing managed configuration.
 func (s *HaproxyService) UpdateConfiguration(ctx context.Context, configuration HaproxyConfiguration) (HaproxyConfiguration, error) {
 	if err := validateConfiguration(configuration); err != nil {
 		return HaproxyConfiguration{}, err
@@ -278,6 +293,7 @@ func (s *HaproxyService) UpdateConfiguration(ctx context.Context, configuration 
 	return cloneConfiguration(updated), nil
 }
 
+// DeleteConfiguration removes a managed HAProxy configuration by name.
 func (s *HaproxyService) DeleteConfiguration(ctx context.Context, name string) error {
 	if _, err := s.getOrCreateClient(ctx); err != nil {
 		return err

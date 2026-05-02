@@ -25,26 +25,31 @@ var embeddedDefaultConfiguration []byte
 //go:embed configuration/environments/*.yaml
 var embeddedEnvironmentConfigurations embed.FS
 
+// AppConfiguration is the root application configuration object.
 type AppConfiguration struct {
 	Grpc    GrpcConfiguration    `yaml:"grpc"`
 	Haproxy HaproxyConfiguration `yaml:"haproxy"`
 }
 
+// GrpcConfiguration stores gRPC server settings.
 type GrpcConfiguration struct {
 	Address string `yaml:"address"`
 }
 
+// HaproxyConfiguration stores HAProxy runtime and file settings.
 type HaproxyConfiguration struct {
 	ConfigurationFile string                     `yaml:"configuration_file"`
 	Socket            HaproxySocketConfiguration `yaml:"socket"`
 }
 
+// HaproxySocketConfiguration stores HAProxy admin socket connection settings.
 type HaproxySocketConfiguration struct {
 	Network string        `yaml:"network"`
 	Address string        `yaml:"address"`
 	Timeout time.Duration `yaml:"timeout"`
 }
 
+// AppConfigurationService loads and caches effective application configuration.
 type AppConfigurationService struct {
 	logger              zerolog.Logger
 	cli                 *CLIRepository
@@ -59,6 +64,7 @@ func newConfigurationService(logger zerolog.Logger, cli *CLIRepository) AppConfi
 	}
 }
 
+// GetConfiguration returns the merged configuration from embedded defaults, env layer and overrides.
 func (a *AppConfigurationService) GetConfiguration() (*AppConfiguration, error) {
 	if a.cachedConfiguration == nil {
 		var configuration AppConfiguration
@@ -153,7 +159,7 @@ func envKeyToPath(key string) []string {
 
 func setNestedConfigurationValue(configuration any, path []string, rawValue string) error {
 	current := reflect.ValueOf(configuration)
-	if current.Kind() != reflect.Ptr || current.IsNil() {
+	if current.Kind() != reflect.Pointer || current.IsNil() {
 		return fmt.Errorf("configuration target must be a non-nil pointer")
 	}
 
@@ -181,7 +187,7 @@ func setNestedConfigurationValue(configuration any, path []string, rawValue stri
 		}
 
 		fieldValue := field
-		if fieldValue.Kind() == reflect.Ptr {
+		if fieldValue.Kind() == reflect.Pointer {
 			if fieldValue.IsNil() {
 				fieldValue.Set(reflect.New(fieldValue.Type().Elem()))
 			}
@@ -219,7 +225,7 @@ func findStructFieldByPathPart(structValue reflect.Value, pathPart string) (refl
 
 func assignValueFromString(destination reflect.Value, rawValue string) error {
 	target := destination
-	if target.Kind() == reflect.Ptr {
+	if target.Kind() == reflect.Pointer {
 		if target.IsNil() {
 			target.Set(reflect.New(target.Type().Elem()))
 		}

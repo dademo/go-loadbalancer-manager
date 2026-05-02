@@ -1,3 +1,4 @@
+// Package services provides application services used by controllers and Fx wiring.
 package services
 
 import (
@@ -12,6 +13,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// GrpcServerService configures and runs the gRPC server lifecycle.
 type GrpcServerService struct {
 	logger               zerolog.Logger
 	configurationService repositories.AppConfigurationService
@@ -64,7 +66,7 @@ func (g *GrpcServerService) configure(lifecycle fx.Lifecycle) error {
 	return nil
 }
 
-func (g *GrpcServerService) onStart(ctx context.Context) error {
+func (g *GrpcServerService) onStart(_ context.Context) error {
 	configuration, err := g.configurationService.GetConfiguration()
 	if err != nil {
 		return err
@@ -89,7 +91,7 @@ func (g *GrpcServerService) onStart(ctx context.Context) error {
 	return nil
 }
 
-func (g *GrpcServerService) onStop(ctx context.Context) error {
+func (g *GrpcServerService) onStop(_ context.Context) error {
 	g.logger.Info().Msg("Gracefully stopping gRPC server")
 	// Update health status to NOT_SERVING before shutting down
 	g.healthService.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
@@ -97,10 +99,12 @@ func (g *GrpcServerService) onStop(ctx context.Context) error {
 	return nil
 }
 
+// RegisterService registers a low-level gRPC service descriptor.
 func (g *GrpcServerService) RegisterService(description *grpc.ServiceDesc, implementation any) {
 	g.grpc.RegisterService(description, implementation)
 }
 
+// RegisterGrpcService registers a generated gRPC service using a registrar callback.
 func (g *GrpcServerService) RegisterGrpcService(register func(grpc.ServiceRegistrar)) {
 	register(g.grpc)
 }

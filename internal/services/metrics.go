@@ -16,6 +16,7 @@ type EndpointStats struct {
 	AverageTime time.Duration
 }
 
+// MetricsService exposes gRPC interceptors that collect request metrics.
 type MetricsService struct {
 	logger zerolog.Logger
 	mu     sync.RWMutex
@@ -30,6 +31,7 @@ func newMetricsService(logger zerolog.Logger) *MetricsService {
 	}
 }
 
+// GetOption returns the gRPC server option provided by this metrics service.
 func (m *MetricsService) GetOption() (grpc.ServerOption, error) {
 	return grpc.UnaryInterceptor(m.onGrpcRequestReceived), nil
 }

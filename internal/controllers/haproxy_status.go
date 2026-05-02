@@ -1,3 +1,4 @@
+// Package controllers exposes gRPC controllers for the load balancer domain.
 package controllers
 
 import (
@@ -13,6 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// HaproxyStatusController exposes HAProxy status and configuration gRPC methods.
 type HaproxyStatusController struct {
 	loadbalancerv1.UnimplementedHaproxyStatusServiceServer
 	logger         zerolog.Logger
@@ -37,6 +39,7 @@ func newHaproxyStatusController(
 	return controller
 }
 
+// GetStatus returns aggregated frontend and backend runtime metrics.
 func (c *HaproxyStatusController) GetStatus(ctx context.Context, _ *loadbalancerv1.Empty) (*loadbalancerv1.HaproxyStatusResponse, error) {
 	status, err := c.haproxyService.GetStatus(ctx)
 	if err != nil {
@@ -51,6 +54,7 @@ func (c *HaproxyStatusController) GetStatus(ctx context.Context, _ *loadbalancer
 	return response, nil
 }
 
+// CreateConfiguration validates and creates a managed HAProxy configuration.
 func (c *HaproxyStatusController) CreateConfiguration(ctx context.Context, request *loadbalancerv1.CreateHaproxyConfigurationRequest) (*loadbalancerv1.HaproxyConfiguration, error) {
 	if request == nil || request.Configuration == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid argument 'configuration': value is required")
@@ -86,6 +90,7 @@ func (c *HaproxyStatusController) CreateConfiguration(ctx context.Context, reque
 	return toProtoConfiguration(created), nil
 }
 
+// ListConfigurations returns all managed HAProxy configurations.
 func (c *HaproxyStatusController) ListConfigurations(ctx context.Context, _ *loadbalancerv1.Empty) (*loadbalancerv1.ListHaproxyConfigurationsResponse, error) {
 	configurations := c.haproxyService.ListConfigurations(ctx)
 
@@ -100,6 +105,7 @@ func (c *HaproxyStatusController) ListConfigurations(ctx context.Context, _ *loa
 	return response, nil
 }
 
+// GetConfiguration returns a single managed HAProxy configuration by name.
 func (c *HaproxyStatusController) GetConfiguration(ctx context.Context, request *loadbalancerv1.GetHaproxyConfigurationRequest) (*loadbalancerv1.HaproxyConfiguration, error) {
 	if request == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid argument 'request': value is required")
@@ -113,6 +119,7 @@ func (c *HaproxyStatusController) GetConfiguration(ctx context.Context, request 
 	return toProtoConfiguration(configuration), nil
 }
 
+// UpdateConfiguration validates and updates an existing managed HAProxy configuration.
 func (c *HaproxyStatusController) UpdateConfiguration(ctx context.Context, request *loadbalancerv1.UpdateHaproxyConfigurationRequest) (*loadbalancerv1.HaproxyConfiguration, error) {
 	if request == nil || request.Configuration == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid argument 'configuration': value is required")
@@ -148,6 +155,7 @@ func (c *HaproxyStatusController) UpdateConfiguration(ctx context.Context, reque
 	return toProtoConfiguration(updated), nil
 }
 
+// DeleteConfiguration deletes a managed HAProxy configuration by name.
 func (c *HaproxyStatusController) DeleteConfiguration(ctx context.Context, request *loadbalancerv1.DeleteHaproxyConfigurationRequest) (*loadbalancerv1.Empty, error) {
 	if request == nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid argument 'request': value is required")

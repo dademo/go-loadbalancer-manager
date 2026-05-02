@@ -4,6 +4,7 @@ import (
 	"go.uber.org/fx"
 )
 
+// Module wires service dependencies into the Fx application.
 var Module = fx.Module("services",
 	fx.Provide(NewLogger),
 	fx.Provide(newHealthService),

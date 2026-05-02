@@ -10,8 +10,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// NewLogger builds the application logger with source-location formatting.
 func NewLogger() zerolog.Logger {
-	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
+	zerolog.CallerMarshalFunc = func(_ uintptr, file string, _ int) string {
 		const moduleRoot = "go-loadbalancer-manager/"
 
 		normalized := filepath.ToSlash(file)

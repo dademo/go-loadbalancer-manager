@@ -1,3 +1,4 @@
+// Package main boots the load balancer manager application.
 package main
 
 import (
