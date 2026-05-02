@@ -5,11 +5,34 @@ run:
 
 linters:
   enable:
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - durationcheck
     - errcheck
+    - errname
+    - errorlint
+    - gocheckcompilerdirectives
+    - gocritic
     - govet
+    - goprintffuncname
     - ineffassign
+    - inamedparam
+    - intrange
+    - makezero
     - staticcheck
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - prealloc
+    - rowserrcheck
     - unused
+    - unconvert
+    - usestdlibvars
+    - wastedassign
+    - zerologlint
     - revive
     - misspell
 

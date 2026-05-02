@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -160,7 +161,7 @@ func envKeyToPath(key string) []string {
 func setNestedConfigurationValue(configuration any, path []string, rawValue string) error {
 	current := reflect.ValueOf(configuration)
 	if current.Kind() != reflect.Pointer || current.IsNil() {
-		return fmt.Errorf("configuration target must be a non-nil pointer")
+		return errors.New("configuration target must be a non-nil pointer")
 	}
 
 	current = current.Elem()

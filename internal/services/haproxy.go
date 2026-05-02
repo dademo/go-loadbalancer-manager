@@ -373,10 +373,10 @@ func (s *HaproxyService) getOrCreateClient(ctx context.Context) (runtime.Runtime
 		return nil, fmt.Errorf("unsupported HAProxy socket network %q: client-native runtime only supports unix sockets", configuration.Haproxy.Socket.Network)
 	}
 	if strings.TrimSpace(configuration.Haproxy.Socket.Address) == "" {
-		return nil, fmt.Errorf("invalid haproxy socket address: value is required")
+		return nil, errors.New("invalid haproxy socket address: value is required")
 	}
 	if strings.TrimSpace(configuration.Haproxy.ConfigurationFile) == "" {
-		return nil, fmt.Errorf("invalid haproxy configuration_file: value is required")
+		return nil, errors.New("invalid haproxy configuration_file: value is required")
 	}
 
 	client, err := runtime.New(ctx, runtimeOptions.MasterSocket(configuration.Haproxy.Socket.Address))
