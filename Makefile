@@ -3,7 +3,8 @@
 APP_NAME := go-loadbalancer-manager
 DIST_DIR := dist
 IMAGE_NAME := $(APP_NAME):latest
-RUNTIME ?= podman
+CONTAINER_RUNTIME ?= podman
+COMPOSE_RUNTIME ?= podman-compose
 VERSION_FILE ?= VERSION
 VERSION ?= $(shell tr -d '\n' < $(VERSION_FILE) 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.Version=$(VERSION)
@@ -74,14 +75,14 @@ version: ## Print resolved build version
 
 .PHONY: build
 build: ## Build the multi-layered container image
-	DOCKER_BUILDKIT=1 $(RUNTIME) build -t $(IMAGE_NAME) -f .devops/container/Containerfile .
+	DOCKER_BUILDKIT=1 $(CONTAINER_RUNTIME) build -t $(IMAGE_NAME) -f .devops/container/Containerfile .
 
 .PHONY: extract
 extract: build ## Build image and extract the binary to dist/
 	@mkdir -p $(DIST_DIR)
-	@id=$$($(RUNTIME) create $(IMAGE_NAME)); \
-	$(RUNTIME) cp $$id:/$(APP_NAME) $(DIST_DIR)/$(APP_NAME); \
-	$(RUNTIME) rm -v $$id > /dev/null
+	@id=$$($(CONTAINER_RUNTIME) create $(IMAGE_NAME)); \
+	$(CONTAINER_RUNTIME) cp $$id:/$(APP_NAME) $(DIST_DIR)/$(APP_NAME); \
+	$(CONTAINER_RUNTIME) rm -v $$id > /dev/null
 	@echo "Extracted to $(DIST_DIR)/$(APP_NAME)"
 
 .PHONY: clean
@@ -93,20 +94,20 @@ clean: ## Clean up local dist artifacts and caches
 ##@ Docker Compose (Test Environment)
 
 .PHONY: compose-up
-compose-up: ## Start HAProxy + backends docker-compose environment
-	cd .devops/compose && docker-compose up -d
+compose-up: ## Start HAProxy + backends $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml environment
+	$(COMPOSE_RUNTIME) -f .devops/compose/compose.yml up -d
 
 .PHONY: compose-down
-compose-down: ## Stop and remove all docker-compose services
-	cd .devops/compose && docker-compose down
+compose-down: ## Stop and remove all $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml services
+	$(COMPOSE_RUNTIME) -f .devops/compose/compose.yml down
 
 .PHONY: compose-logs
-compose-logs: ## Stream logs from docker-compose services
-	cd .devops/compose && docker-compose logs -f
+compose-logs: ## Stream logs from $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml services
+	$(COMPOSE_RUNTIME) -f .devops/compose/compose.yml logs -f
 
 .PHONY: compose-ps
-compose-ps: ## Show running docker-compose services
-	cd .devops/compose && docker-compose ps
+compose-ps: ## Show running $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml services
+	$(COMPOSE_RUNTIME) -f .devops/compose/compose.yml ps
 
 .PHONY: compose-stats
 compose-stats: ## Open HAProxy stats page (curl)
@@ -121,8 +122,10 @@ compose-test-lb: ## Test load balancing with 10 requests
 	done
 
 .PHONY: compose-clean
-compose-clean: ## Remove docker-compose volumes and networks
-	cd .devops/compose && docker-compose down -v
+compose-clean: ## Remove $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml volumes and networks
+	$(COMPOSE_RUNTIME) -f .devops/compose/compose.yml down -v
 
 .PHONY: dev-env
 dev-env: compose-up ## Start development environment with HAProxy + backends
+
+.PHONY: dev-env-
