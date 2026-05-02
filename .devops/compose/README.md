@@ -1,6 +1,6 @@
 # HAProxy + Backends Docker Compose Setup
 
-This docker-compose configuration creates a complete test environment for the Go load balancer manager with HAProxy.
+This compose configuration creates a complete test environment for the Go load balancer manager with HAProxy.
 
 ## Architecture
 
@@ -10,7 +10,7 @@ This docker-compose configuration creates a complete test environment for the Go
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐ │
 │  │ Go Load Balancer Manager (cmd/main.go)            │ │
-│  │ - Connects to: /var/run/haproxy/admin.sock        │ │
+│  │ - Connects to: /var/run/haproxy/master.sock       │ │
 │  │ - Queries HAProxy via client-native/v6            │ │
 │  └────────────────────────────────────────────────────┘ │
 │            ↓ Unix socket (volume mount)                 │
@@ -30,8 +30,8 @@ This docker-compose configuration creates a complete test environment for the Go
 │  │              │   HAProxy        │                   │ │
 │  │              │  Load Balancer   │                   │ │
 │  │              │                  │                   │ │
-│  │              │ admin.sock       │ ←─────────────┐   │ │
-│  │              │ (socket admin)   │               │   │ │
+│  │              │ master.sock      │ ←─────────────┐   │ │
+│  │              │ admin.sock       │ (healthcheck) │   │ │
 │  │              └──────────────────┘               │   │ │
 │  │                                                  │   │ │
 │  └──────────────────────────────────────────────────┼───┘ │
@@ -43,7 +43,7 @@ This docker-compose configuration creates a complete test environment for the Go
 │    └──────────────────────────────┘                 │
 │                                                      │
 │    Socket available at:                             │
-│    /var/run/haproxy/admin.sock                      │
+│    ./tmp/haproxy/master.sock, ./tmp/haproxy/admin.sock │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -60,7 +60,8 @@ This docker-compose configuration creates a complete test environment for the Go
 
 - **Image**: `haproxy:2.8-alpine`
 - **Networks**: Internal (`haproxy-internal`) + Host
-- **Admin Socket**: `/var/run/haproxy/admin.sock` (configured by default)
+- **Master Socket**: `/var/run/haproxy/master.sock` (used by the Go runtime client)
+- **Admin Socket**: `/var/run/haproxy/admin.sock` (health/admin checks)
 - **HTTP Listener**: Created dynamically by the Go service (example: `http://localhost:8080/`)
 - **Stats Page**: No default HTTP `/stats` endpoint in `.devops/compose/haproxy.cfg`
 - **Load Balancing**: Round-robin across 3 backends
@@ -71,14 +72,13 @@ This docker-compose configuration creates a complete test environment for the Go
 ### 1. Start the Docker Compose Environment
 
 ```bash
-cd .devops/compose
-docker-compose up -d
+make compose-up
 ```
 
 ### 2. Verify Services are Running
 
 ```bash
-docker-compose ps
+make compose-ps
 ```
 
 Should show all 4 services (3 backends + haproxy) as healthy.
@@ -104,7 +104,7 @@ done
 
 The Go load balancer manager should:
 
-1. Set `HaproxyConfiguration.Socket.Address` to `/var/run/haproxy/admin.sock`
+1. Set `HaproxyConfiguration.Socket.Address` to `./tmp/haproxy/master.sock` (local host run)
 2. Ensure socket is mounted at runtime (Docker volume or host path)
 3. Call `HaproxyService.GetStatus()` to query HAProxy stats
 4. Expose results via gRPC
@@ -115,7 +115,7 @@ Example from config:
 haproxy:
   socket:
     network: "unix"
-    address: "/var/run/haproxy/admin.sock"
+    address: "./tmp/haproxy/master.sock"
     timeout: "3s"
 ```
 
@@ -129,7 +129,7 @@ go run ./cmd/main.go
 grpcurl -plaintext localhost:50051 loadbalancer.v1.HaproxyStatusService.GetStatus
 ```
 
-## Accessing HAProxy Admin Socket from Go App
+## Accessing HAProxy Sockets from Go App
 
 ### Option A: Docker Volume Mount (Recommended)
 
@@ -137,7 +137,7 @@ When running your Go app in Docker:
 
 ```yaml
 volumes:
-  - haproxy-socket:/var/run/haproxy
+  - ./tmp/haproxy:/var/run/haproxy
 ```
 
 ### Option B: Host Path
@@ -145,13 +145,13 @@ volumes:
 When running your Go app on the host:
 
 ```bash
-# The socket is accessible at the host path after compose is running
-ls -la /var/run/haproxy/admin.sock
+# Sockets are accessible in the project runtime directory after compose is running
+ls -la ./tmp/haproxy/master.sock ./tmp/haproxy/admin.sock
 ```
 
 ### Option C: TCP Socket (Alternative)
 
-Edit `haproxy.cfg` to expose stats via TCP:
+Edit `haproxy.cfg` to expose admin socket via TCP:
 
 ```
 stats socket 0.0.0.0:9001 level admin
@@ -164,7 +164,8 @@ stats socket 0.0.0.0:9001 level admin
 See `haproxy.cfg` for details:
 
 - **Global Settings**: Logging, socket configuration, performance tuning
-- **Admin Access**: Runtime admin socket (`/var/run/haproxy/admin.sock`)
+- **Runtime Access**: Master socket (`/var/run/haproxy/master.sock`)
+- **Admin/Health Access**: Admin socket (`/var/run/haproxy/admin.sock`)
 - **Frontend**: HTTP entry point
 - **Backend Pool**: Round-robin load balancing across 3 servers
 - **Health Checks**: HTTP checks every 5 seconds
@@ -173,29 +174,30 @@ See `haproxy.cfg` for details:
 
 - **Internal Network**: `haproxy-internal` (bridge driver)
 - **Host Network**: Allows HAProxy to communicate with localhost services
-- **Volume**: `haproxy-socket` for admin socket sharing
+- **Volume Mount**: `./tmp/haproxy:/var/run/haproxy` for socket sharing
 
 ## Testing Scenarios
 
 ### 1. Backend Health Check
 
 ```bash
-docker-compose exec haproxy cat /var/run/haproxy/admin.sock
+make compose-ps
+test -S ./tmp/haproxy/admin.sock && echo "admin socket ready"
 ```
 
 ### 2. Restart a Backend
 
 ```bash
-docker-compose restart backend-2
+podman-compose -f .devops/compose/compose.yml restart backend-2
 # HAProxy should mark it DOWN, then UP when it recovers
 ```
 
 ### 3. Scale Backends (Manual Edit Required)
 
-Edit `docker-compose.yml`, add more backend services, run:
+Edit `compose.yml`, add more backend services, run:
 
 ```bash
-docker-compose up -d
+make compose-up
 ```
 
 ### 4. Load Test
@@ -217,20 +219,20 @@ If you get permission errors accessing the socket:
 
 ```bash
 # Check socket exists and is readable
-ls -la /var/run/haproxy/admin.sock
+ls -la ./tmp/haproxy/master.sock ./tmp/haproxy/admin.sock
 
 # Ensure volume is properly mounted
-docker-compose exec haproxy ls -la /var/run/haproxy/admin.sock
+make compose-ps
 ```
 
 ### HAProxy Won't Start
 
 ```bash
 # Check logs
-docker-compose logs haproxy
+make compose-logs
 
 # Validate config syntax
-docker run --rm -v $(pwd)/haproxy.cfg:/haproxy.cfg haproxy:2.8-alpine \
+docker run --rm -v $(pwd)/.devops/compose/haproxy.cfg:/haproxy.cfg haproxy:2.8-alpine \
   haproxy -f /haproxy.cfg -c
 ```
 
@@ -238,17 +240,17 @@ docker run --rm -v $(pwd)/haproxy.cfg:/haproxy.cfg haproxy:2.8-alpine \
 
 ```bash
 # Check if backends are healthy
-docker-compose exec haproxy wget -qO- http://backend-1:8001
+make compose-ps
 
 # Check internal network connectivity
-docker-compose exec backend-1 ping backend-2
+make compose-logs
 ```
 
 ### Socket Not Visible on Host
 
 If running on Docker Desktop (Mac/Windows), sockets may not be accessible directly. Use:
 
-- Docker volumes (mounted into Go app container)
+- Bind mounts or named volumes mounted into the Go app container
 - TCP socket configuration in HAProxy (port 9001)
 - Docker Compose service name resolution
 
@@ -256,20 +258,20 @@ If running on Docker Desktop (Mac/Windows), sockets may not be accessible direct
 
 ```bash
 # Stop and remove all services
-docker-compose down
+make compose-down
 
 # Remove volumes (optional)
-docker-compose down -v
+make compose-clean
 
 # View logs from stopped containers
-docker-compose logs
+make compose-logs
 ```
 
 ## Performance Tuning
 
 For production-like testing:
 
-1. Increase backend server count in `docker-compose.yml`
+1. Increase backend server count in `compose.yml`
 2. Adjust HAProxy `maxconn` in `haproxy.cfg`
 3. Tune timeout values for your use case
 4. Add rate limiting rules if needed
@@ -277,7 +279,7 @@ For production-like testing:
 
 ## Next Steps
 
-1. Configure your Go app to use `/var/run/haproxy/admin.sock`
+1. Configure your Go app to use `./tmp/haproxy/master.sock` (or `/var/run/haproxy/master.sock` in container)
 2. Run `go run ./cmd/main.go` to connect and query stats
 3. Verify gRPC endpoints expose HAProxy status correctly
 4. Load test with various backend health scenarios
