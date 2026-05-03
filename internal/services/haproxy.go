@@ -2,11 +2,14 @@ package services
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -45,6 +48,7 @@ type HaproxyService struct {
 	mu                   sync.RWMutex
 	client               runtime.Runtime
 	configurationFile    string
+	certificatesDir      string
 }
 
 var (
@@ -385,6 +389,13 @@ func (s *HaproxyService) getOrCreateClient(ctx context.Context) (runtime.Runtime
 	}
 
 	s.configurationFile = configuration.Haproxy.ConfigurationFile
+	s.certificatesDir = s.computeCertificatesDirectory()
+
+	// Ensure certificates directory exists
+	if err := os.MkdirAll(s.certificatesDir, 0700); err != nil {
+		return nil, fmt.Errorf("unable to create certificates directory %q: %w", s.certificatesDir, err)
+	}
+
 	s.client = client
 	return s.client, nil
 }
@@ -424,6 +435,13 @@ func (s *HaproxyService) loadConfigurationsLocked() ([]HaproxyConfiguration, err
 }
 
 func (s *HaproxyService) persistAndReloadLocked(configurations []HaproxyConfiguration) error {
+	// Ensure certificate PEM data is written to files and paths are updated
+	for i := range configurations {
+		if err := s.ensureCertificatePath(&configurations[i]); err != nil {
+			return err
+		}
+	}
+
 	before, err := os.ReadFile(s.configurationFile)
 	if err != nil {
 		return fmt.Errorf("unable to read HAProxy configuration file %q: %w", s.configurationFile, err)
@@ -755,6 +773,15 @@ func validateTLSConfiguration(configuration *HaproxyTLSConfiguration) error {
 		if certificatePEM == "" || privateKeyPEM == "" {
 			return fmt.Errorf("tls.certificate_pem and tls.private_key_pem must both be provided: %w", ErrInvalidConfiguration)
 		}
+
+		// Validate that PEM data is well-formed
+		if err := validateCertificatePEM(certificatePEM); err != nil {
+			return err
+		}
+
+		if err := validatePrivateKeyPEM(privateKeyPEM); err != nil {
+			return err
+		}
 	}
 
 	if hasPathPair && hasPEMPair {
@@ -779,4 +806,122 @@ func cloneConfiguration(configuration HaproxyConfiguration) HaproxyConfiguration
 	}
 
 	return cloned
+}
+
+// validateCertificatePEM validates that the provided PEM data is a well-formed certificate.
+// It does not check expiration date.
+func validateCertificatePEM(certPEM string) error {
+	if strings.TrimSpace(certPEM) == "" {
+		return fmt.Errorf("certificate PEM data is empty: %w", ErrInvalidConfiguration)
+	}
+
+	block, rest := pem.Decode([]byte(certPEM))
+	if block == nil {
+		return fmt.Errorf("invalid certificate PEM format: could not parse PEM block: %w", ErrInvalidConfiguration)
+	}
+
+	// Check if it's a certificate block
+	if block.Type != "CERTIFICATE" {
+		return fmt.Errorf("invalid certificate PEM: expected CERTIFICATE block, got %s: %w", block.Type, ErrInvalidConfiguration)
+	}
+
+	// Parse the certificate to ensure it's valid
+	_, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("invalid certificate PEM: %w", ErrInvalidConfiguration)
+	}
+
+	// Warn if there are extra bytes after the first certificate
+	if len(strings.TrimSpace(string(rest))) > 0 {
+		// Log but don't fail - there might be extra whitespace
+	}
+
+	return nil
+}
+
+// validatePrivateKeyPEM validates that the provided PEM data is a well-formed private key.
+func validatePrivateKeyPEM(keyPEM string) error {
+	if strings.TrimSpace(keyPEM) == "" {
+		return fmt.Errorf("private key PEM data is empty: %w", ErrInvalidConfiguration)
+	}
+
+	block, _ := pem.Decode([]byte(keyPEM))
+	if block == nil {
+		return fmt.Errorf("invalid private key PEM format: could not parse PEM block: %w", ErrInvalidConfiguration)
+	}
+
+	// Check if it's a private key block (can be RSA, EC, PKCS8, etc.)
+	keyTypes := map[string]bool{
+		"RSA PRIVATE KEY":     true,
+		"PRIVATE KEY":         true,
+		"EC PRIVATE KEY":      true,
+		"DSA PRIVATE KEY":     true,
+		"OPENSSH PRIVATE KEY": true,
+	}
+
+	if !keyTypes[block.Type] {
+		return fmt.Errorf("invalid private key PEM: expected private key block, got %s: %w", block.Type, ErrInvalidConfiguration)
+	}
+
+	// Try to parse the private key to ensure it's valid
+	_, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		// PKCS8 parsing failed, try PKCS1 RSA key parsing
+		_, rsaErr := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if rsaErr != nil {
+			// Try EC key parsing
+			_, ecErr := x509.ParseECPrivateKey(block.Bytes)
+			if ecErr != nil {
+				return fmt.Errorf("invalid private key PEM: could not parse as PKCS8, PKCS1, or EC key: %w", ErrInvalidConfiguration)
+			}
+		}
+	}
+
+	return nil
+}
+
+// computeCertificatesDirectory computes the path to the certificates directory.
+// It creates a "certificates" subdirectory next to the HAProxy configuration file.
+func (s *HaproxyService) computeCertificatesDirectory() string {
+	dir := filepath.Dir(s.configurationFile)
+	return filepath.Join(dir, "certificates")
+}
+
+// ensureCertificatePath handles both file paths and PEM-encoded certificate data.
+// If a certificate path is provided, it returns without modification.
+// If PEM data is provided, it writes both certificate and key to a combined file
+// (HAProxy expects certificate and key in the same file) and updates the path.
+func (s *HaproxyService) ensureCertificatePath(configuration *HaproxyConfiguration) error {
+	if configuration.TLS == nil || !configuration.TLS.Enabled {
+		return nil
+	}
+
+	certificatePath := strings.TrimSpace(configuration.TLS.CertificatePath)
+	certificatePEM := strings.TrimSpace(configuration.TLS.CertificatePEM)
+	privateKeyPEM := strings.TrimSpace(configuration.TLS.PrivateKeyPEM)
+
+	// If a path is provided, use it directly
+	if certificatePath != "" {
+		return nil
+	}
+
+	// If PEM data is provided, write certificate + key to a combined file
+	if certificatePEM != "" && privateKeyPEM != "" {
+		fileName := fmt.Sprintf("%s.pem", strings.ToLower(strings.ReplaceAll(configuration.Name, " ", "_")))
+		filePath := filepath.Join(s.certificatesDir, fileName)
+
+		// Combine certificate and key into a single PEM file (HAProxy expects this format)
+		combinedPEM := certificatePEM + "\n" + privateKeyPEM
+		if err := os.WriteFile(filePath, []byte(combinedPEM), 0600); err != nil {
+			return fmt.Errorf("unable to write certificate file %q: %w", filePath, err)
+		}
+
+		// Update the configuration to use the written certificate path
+		configuration.TLS.CertificatePath = filePath
+		// Clear the PEM fields since they're now in a file
+		configuration.TLS.CertificatePEM = ""
+		configuration.TLS.PrivateKeyPEM = ""
+	}
+
+	return nil
 }
