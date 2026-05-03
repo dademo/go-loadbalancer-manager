@@ -123,6 +123,83 @@ func (HaproxyLoadBalancingStrategy) EnumDescriptor() ([]byte, []int) {
 	return file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDescGZIP(), []int{1}
 }
 
+// Socket state enum
+type SocketState int32
+
+const (
+	SocketState_SOCKET_STATE_UNSPECIFIED SocketState = 0
+	SocketState_SOCKET_STATE_ESTABLISHED SocketState = 1
+	SocketState_SOCKET_STATE_SYN_SENT    SocketState = 2
+	SocketState_SOCKET_STATE_SYN_RECV    SocketState = 3
+	SocketState_SOCKET_STATE_FIN_WAIT1   SocketState = 4
+	SocketState_SOCKET_STATE_FIN_WAIT2   SocketState = 5
+	SocketState_SOCKET_STATE_TIME_WAIT   SocketState = 6
+	SocketState_SOCKET_STATE_CLOSED      SocketState = 7
+	SocketState_SOCKET_STATE_CLOSE_WAIT  SocketState = 8
+	SocketState_SOCKET_STATE_LAST_ACK    SocketState = 9
+	SocketState_SOCKET_STATE_LISTEN      SocketState = 10
+	SocketState_SOCKET_STATE_CLOSING     SocketState = 11
+)
+
+// Enum value maps for SocketState.
+var (
+	SocketState_name = map[int32]string{
+		0:  "SOCKET_STATE_UNSPECIFIED",
+		1:  "SOCKET_STATE_ESTABLISHED",
+		2:  "SOCKET_STATE_SYN_SENT",
+		3:  "SOCKET_STATE_SYN_RECV",
+		4:  "SOCKET_STATE_FIN_WAIT1",
+		5:  "SOCKET_STATE_FIN_WAIT2",
+		6:  "SOCKET_STATE_TIME_WAIT",
+		7:  "SOCKET_STATE_CLOSED",
+		8:  "SOCKET_STATE_CLOSE_WAIT",
+		9:  "SOCKET_STATE_LAST_ACK",
+		10: "SOCKET_STATE_LISTEN",
+		11: "SOCKET_STATE_CLOSING",
+	}
+	SocketState_value = map[string]int32{
+		"SOCKET_STATE_UNSPECIFIED": 0,
+		"SOCKET_STATE_ESTABLISHED": 1,
+		"SOCKET_STATE_SYN_SENT":    2,
+		"SOCKET_STATE_SYN_RECV":    3,
+		"SOCKET_STATE_FIN_WAIT1":   4,
+		"SOCKET_STATE_FIN_WAIT2":   5,
+		"SOCKET_STATE_TIME_WAIT":   6,
+		"SOCKET_STATE_CLOSED":      7,
+		"SOCKET_STATE_CLOSE_WAIT":  8,
+		"SOCKET_STATE_LAST_ACK":    9,
+		"SOCKET_STATE_LISTEN":      10,
+		"SOCKET_STATE_CLOSING":     11,
+	}
+)
+
+func (x SocketState) Enum() *SocketState {
+	p := new(SocketState)
+	*p = x
+	return p
+}
+
+func (x SocketState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SocketState) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_proto_loadbalancer_v1_haproxy_status_proto_enumTypes[2].Descriptor()
+}
+
+func (SocketState) Type() protoreflect.EnumType {
+	return &file_api_proto_loadbalancer_v1_haproxy_status_proto_enumTypes[2]
+}
+
+func (x SocketState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SocketState.Descriptor instead.
+func (SocketState) EnumDescriptor() ([]byte, []int) {
+	return file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDescGZIP(), []int{2}
+}
+
 type Empty struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -815,6 +892,237 @@ func (x *ListHaproxyConfigurationsResponse) GetConfigurations() []*HaproxyConfig
 	return nil
 }
 
+// Information about a network socket connection
+type SocketConnection struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LocalAddress  string                 `protobuf:"bytes,1,opt,name=local_address,json=localAddress,proto3" json:"local_address,omitempty"`
+	LocalPort     uint32                 `protobuf:"varint,2,opt,name=local_port,json=localPort,proto3" json:"local_port,omitempty"`
+	RemoteAddress string                 `protobuf:"bytes,3,opt,name=remote_address,json=remoteAddress,proto3" json:"remote_address,omitempty"`
+	RemotePort    uint32                 `protobuf:"varint,4,opt,name=remote_port,json=remotePort,proto3" json:"remote_port,omitempty"`
+	State         SocketState            `protobuf:"varint,5,opt,name=state,proto3,enum=loadbalancer.v1.SocketState" json:"state,omitempty"`
+	Uid           uint32                 `protobuf:"varint,6,opt,name=uid,proto3" json:"uid,omitempty"`
+	Inode         uint32                 `protobuf:"varint,7,opt,name=inode,proto3" json:"inode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SocketConnection) Reset() {
+	*x = SocketConnection{}
+	mi := &file_api_proto_loadbalancer_v1_haproxy_status_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SocketConnection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SocketConnection) ProtoMessage() {}
+
+func (x *SocketConnection) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_loadbalancer_v1_haproxy_status_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SocketConnection.ProtoReflect.Descriptor instead.
+func (*SocketConnection) Descriptor() ([]byte, []int) {
+	return file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SocketConnection) GetLocalAddress() string {
+	if x != nil {
+		return x.LocalAddress
+	}
+	return ""
+}
+
+func (x *SocketConnection) GetLocalPort() uint32 {
+	if x != nil {
+		return x.LocalPort
+	}
+	return 0
+}
+
+func (x *SocketConnection) GetRemoteAddress() string {
+	if x != nil {
+		return x.RemoteAddress
+	}
+	return ""
+}
+
+func (x *SocketConnection) GetRemotePort() uint32 {
+	if x != nil {
+		return x.RemotePort
+	}
+	return 0
+}
+
+func (x *SocketConnection) GetState() SocketState {
+	if x != nil {
+		return x.State
+	}
+	return SocketState_SOCKET_STATE_UNSPECIFIED
+}
+
+func (x *SocketConnection) GetUid() uint32 {
+	if x != nil {
+		return x.Uid
+	}
+	return 0
+}
+
+func (x *SocketConnection) GetInode() uint32 {
+	if x != nil {
+		return x.Inode
+	}
+	return 0
+}
+
+// Sockets grouped by state
+type SocketsByState struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	State         SocketState            `protobuf:"varint,1,opt,name=state,proto3,enum=loadbalancer.v1.SocketState" json:"state,omitempty"`
+	Connections   []*SocketConnection    `protobuf:"bytes,2,rep,name=connections,proto3" json:"connections,omitempty"`
+	Count         int32                  `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SocketsByState) Reset() {
+	*x = SocketsByState{}
+	mi := &file_api_proto_loadbalancer_v1_haproxy_status_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SocketsByState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SocketsByState) ProtoMessage() {}
+
+func (x *SocketsByState) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_loadbalancer_v1_haproxy_status_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SocketsByState.ProtoReflect.Descriptor instead.
+func (*SocketsByState) Descriptor() ([]byte, []int) {
+	return file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *SocketsByState) GetState() SocketState {
+	if x != nil {
+		return x.State
+	}
+	return SocketState_SOCKET_STATE_UNSPECIFIED
+}
+
+func (x *SocketsByState) GetConnections() []*SocketConnection {
+	if x != nil {
+		return x.Connections
+	}
+	return nil
+}
+
+func (x *SocketsByState) GetCount() int32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+// Response containing all network socket connections grouped by state
+type GetNetworkSocketsResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	SocketsByState   []*SocketsByState      `protobuf:"bytes,1,rep,name=sockets_by_state,json=socketsByState,proto3" json:"sockets_by_state,omitempty"`
+	TotalSockets     int32                  `protobuf:"varint,2,opt,name=total_sockets,json=totalSockets,proto3" json:"total_sockets,omitempty"`
+	EstablishedCount int32                  `protobuf:"varint,3,opt,name=established_count,json=establishedCount,proto3" json:"established_count,omitempty"`
+	ListenCount      int32                  `protobuf:"varint,4,opt,name=listen_count,json=listenCount,proto3" json:"listen_count,omitempty"`
+	TimeWaitCount    int32                  `protobuf:"varint,5,opt,name=time_wait_count,json=timeWaitCount,proto3" json:"time_wait_count,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetNetworkSocketsResponse) Reset() {
+	*x = GetNetworkSocketsResponse{}
+	mi := &file_api_proto_loadbalancer_v1_haproxy_status_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNetworkSocketsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNetworkSocketsResponse) ProtoMessage() {}
+
+func (x *GetNetworkSocketsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_loadbalancer_v1_haproxy_status_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNetworkSocketsResponse.ProtoReflect.Descriptor instead.
+func (*GetNetworkSocketsResponse) Descriptor() ([]byte, []int) {
+	return file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *GetNetworkSocketsResponse) GetSocketsByState() []*SocketsByState {
+	if x != nil {
+		return x.SocketsByState
+	}
+	return nil
+}
+
+func (x *GetNetworkSocketsResponse) GetTotalSockets() int32 {
+	if x != nil {
+		return x.TotalSockets
+	}
+	return 0
+}
+
+func (x *GetNetworkSocketsResponse) GetEstablishedCount() int32 {
+	if x != nil {
+		return x.EstablishedCount
+	}
+	return 0
+}
+
+func (x *GetNetworkSocketsResponse) GetListenCount() int32 {
+	if x != nil {
+		return x.ListenCount
+	}
+	return 0
+}
+
+func (x *GetNetworkSocketsResponse) GetTimeWaitCount() int32 {
+	if x != nil {
+		return x.TimeWaitCount
+	}
+	return 0
+}
+
 var File_api_proto_loadbalancer_v1_haproxy_status_proto protoreflect.FileDescriptor
 
 const file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDesc = "" +
@@ -869,7 +1177,27 @@ const file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDesc = "" +
 	"!DeleteHaproxyConfigurationRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"r\n" +
 	"!ListHaproxyConfigurationsResponse\x12M\n" +
-	"\x0econfigurations\x18\x01 \x03(\v2%.loadbalancer.v1.HaproxyConfigurationR\x0econfigurations*w\n" +
+	"\x0econfigurations\x18\x01 \x03(\v2%.loadbalancer.v1.HaproxyConfigurationR\x0econfigurations\"\xfa\x01\n" +
+	"\x10SocketConnection\x12#\n" +
+	"\rlocal_address\x18\x01 \x01(\tR\flocalAddress\x12\x1d\n" +
+	"\n" +
+	"local_port\x18\x02 \x01(\rR\tlocalPort\x12%\n" +
+	"\x0eremote_address\x18\x03 \x01(\tR\rremoteAddress\x12\x1f\n" +
+	"\vremote_port\x18\x04 \x01(\rR\n" +
+	"remotePort\x122\n" +
+	"\x05state\x18\x05 \x01(\x0e2\x1c.loadbalancer.v1.SocketStateR\x05state\x12\x10\n" +
+	"\x03uid\x18\x06 \x01(\rR\x03uid\x12\x14\n" +
+	"\x05inode\x18\a \x01(\rR\x05inode\"\x9f\x01\n" +
+	"\x0eSocketsByState\x122\n" +
+	"\x05state\x18\x01 \x01(\x0e2\x1c.loadbalancer.v1.SocketStateR\x05state\x12C\n" +
+	"\vconnections\x18\x02 \x03(\v2!.loadbalancer.v1.SocketConnectionR\vconnections\x12\x14\n" +
+	"\x05count\x18\x03 \x01(\x05R\x05count\"\x83\x02\n" +
+	"\x19GetNetworkSocketsResponse\x12I\n" +
+	"\x10sockets_by_state\x18\x01 \x03(\v2\x1f.loadbalancer.v1.SocketsByStateR\x0esocketsByState\x12#\n" +
+	"\rtotal_sockets\x18\x02 \x01(\x05R\ftotalSockets\x12+\n" +
+	"\x11established_count\x18\x03 \x01(\x05R\x10establishedCount\x12!\n" +
+	"\flisten_count\x18\x04 \x01(\x05R\vlistenCount\x12&\n" +
+	"\x0ftime_wait_count\x18\x05 \x01(\x05R\rtimeWaitCount*w\n" +
 	"\x12HaproxyTrafficMode\x12$\n" +
 	" HAPROXY_TRAFFIC_MODE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19HAPROXY_TRAFFIC_MODE_HTTP\x10\x01\x12\x1c\n" +
@@ -878,14 +1206,29 @@ const file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDesc = "" +
 	"+HAPROXY_LOAD_BALANCING_STRATEGY_UNSPECIFIED\x10\x00\x12.\n" +
 	"*HAPROXY_LOAD_BALANCING_STRATEGY_ROUNDROBIN\x10\x01\x12-\n" +
 	")HAPROXY_LOAD_BALANCING_STRATEGY_LEASTCONN\x10\x02\x12*\n" +
-	"&HAPROXY_LOAD_BALANCING_STRATEGY_SOURCE\x10\x032\xf8\x04\n" +
+	"&HAPROXY_LOAD_BALANCING_STRATEGY_SOURCE\x10\x03*\xd7\x02\n" +
+	"\vSocketState\x12\x1c\n" +
+	"\x18SOCKET_STATE_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18SOCKET_STATE_ESTABLISHED\x10\x01\x12\x19\n" +
+	"\x15SOCKET_STATE_SYN_SENT\x10\x02\x12\x19\n" +
+	"\x15SOCKET_STATE_SYN_RECV\x10\x03\x12\x1a\n" +
+	"\x16SOCKET_STATE_FIN_WAIT1\x10\x04\x12\x1a\n" +
+	"\x16SOCKET_STATE_FIN_WAIT2\x10\x05\x12\x1a\n" +
+	"\x16SOCKET_STATE_TIME_WAIT\x10\x06\x12\x17\n" +
+	"\x13SOCKET_STATE_CLOSED\x10\a\x12\x1b\n" +
+	"\x17SOCKET_STATE_CLOSE_WAIT\x10\b\x12\x19\n" +
+	"\x15SOCKET_STATE_LAST_ACK\x10\t\x12\x17\n" +
+	"\x13SOCKET_STATE_LISTEN\x10\n" +
+	"\x12\x18\n" +
+	"\x14SOCKET_STATE_CLOSING\x10\v2\xd1\x05\n" +
 	"\x14HaproxyStatusService\x12K\n" +
 	"\tGetStatus\x12\x16.loadbalancer.v1.Empty\x1a&.loadbalancer.v1.HaproxyStatusResponse\x12p\n" +
 	"\x13CreateConfiguration\x122.loadbalancer.v1.CreateHaproxyConfigurationRequest\x1a%.loadbalancer.v1.HaproxyConfiguration\x12`\n" +
 	"\x12ListConfigurations\x12\x16.loadbalancer.v1.Empty\x1a2.loadbalancer.v1.ListHaproxyConfigurationsResponse\x12j\n" +
 	"\x10GetConfiguration\x12/.loadbalancer.v1.GetHaproxyConfigurationRequest\x1a%.loadbalancer.v1.HaproxyConfiguration\x12p\n" +
 	"\x13UpdateConfiguration\x122.loadbalancer.v1.UpdateHaproxyConfigurationRequest\x1a%.loadbalancer.v1.HaproxyConfiguration\x12a\n" +
-	"\x13DeleteConfiguration\x122.loadbalancer.v1.DeleteHaproxyConfigurationRequest\x1a\x16.loadbalancer.v1.EmptyBRZPdademo.fr/loadbalancer-manager/internal/gen/proto/loadbalancer/v1;loadbalancerv1b\x06proto3"
+	"\x13DeleteConfiguration\x122.loadbalancer.v1.DeleteHaproxyConfigurationRequest\x1a\x16.loadbalancer.v1.Empty\x12W\n" +
+	"\x11GetNetworkSockets\x12\x16.loadbalancer.v1.Empty\x1a*.loadbalancer.v1.GetNetworkSocketsResponseBRZPdademo.fr/loadbalancer-manager/internal/gen/proto/loadbalancer/v1;loadbalancerv1b\x06proto3"
 
 var (
 	file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDescOnce sync.Once
@@ -899,50 +1242,60 @@ func file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDescGZIP() []byte {
 	return file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDescData
 }
 
-var file_api_proto_loadbalancer_v1_haproxy_status_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_api_proto_loadbalancer_v1_haproxy_status_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_api_proto_loadbalancer_v1_haproxy_status_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_api_proto_loadbalancer_v1_haproxy_status_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_api_proto_loadbalancer_v1_haproxy_status_proto_goTypes = []any{
 	(HaproxyTrafficMode)(0),                   // 0: loadbalancer.v1.HaproxyTrafficMode
 	(HaproxyLoadBalancingStrategy)(0),         // 1: loadbalancer.v1.HaproxyLoadBalancingStrategy
-	(*Empty)(nil),                             // 2: loadbalancer.v1.Empty
-	(*HaproxyProxyStatus)(nil),                // 3: loadbalancer.v1.HaproxyProxyStatus
-	(*HaproxyStatusResponse)(nil),             // 4: loadbalancer.v1.HaproxyStatusResponse
-	(*HaproxyConfiguration)(nil),              // 5: loadbalancer.v1.HaproxyConfiguration
-	(*HaproxyBackendTarget)(nil),              // 6: loadbalancer.v1.HaproxyBackendTarget
-	(*HaproxyTLSConfiguration)(nil),           // 7: loadbalancer.v1.HaproxyTLSConfiguration
-	(*CreateHaproxyConfigurationRequest)(nil), // 8: loadbalancer.v1.CreateHaproxyConfigurationRequest
-	(*GetHaproxyConfigurationRequest)(nil),    // 9: loadbalancer.v1.GetHaproxyConfigurationRequest
-	(*UpdateHaproxyConfigurationRequest)(nil), // 10: loadbalancer.v1.UpdateHaproxyConfigurationRequest
-	(*DeleteHaproxyConfigurationRequest)(nil), // 11: loadbalancer.v1.DeleteHaproxyConfigurationRequest
-	(*ListHaproxyConfigurationsResponse)(nil), // 12: loadbalancer.v1.ListHaproxyConfigurationsResponse
+	(SocketState)(0),                          // 2: loadbalancer.v1.SocketState
+	(*Empty)(nil),                             // 3: loadbalancer.v1.Empty
+	(*HaproxyProxyStatus)(nil),                // 4: loadbalancer.v1.HaproxyProxyStatus
+	(*HaproxyStatusResponse)(nil),             // 5: loadbalancer.v1.HaproxyStatusResponse
+	(*HaproxyConfiguration)(nil),              // 6: loadbalancer.v1.HaproxyConfiguration
+	(*HaproxyBackendTarget)(nil),              // 7: loadbalancer.v1.HaproxyBackendTarget
+	(*HaproxyTLSConfiguration)(nil),           // 8: loadbalancer.v1.HaproxyTLSConfiguration
+	(*CreateHaproxyConfigurationRequest)(nil), // 9: loadbalancer.v1.CreateHaproxyConfigurationRequest
+	(*GetHaproxyConfigurationRequest)(nil),    // 10: loadbalancer.v1.GetHaproxyConfigurationRequest
+	(*UpdateHaproxyConfigurationRequest)(nil), // 11: loadbalancer.v1.UpdateHaproxyConfigurationRequest
+	(*DeleteHaproxyConfigurationRequest)(nil), // 12: loadbalancer.v1.DeleteHaproxyConfigurationRequest
+	(*ListHaproxyConfigurationsResponse)(nil), // 13: loadbalancer.v1.ListHaproxyConfigurationsResponse
+	(*SocketConnection)(nil),                  // 14: loadbalancer.v1.SocketConnection
+	(*SocketsByState)(nil),                    // 15: loadbalancer.v1.SocketsByState
+	(*GetNetworkSocketsResponse)(nil),         // 16: loadbalancer.v1.GetNetworkSocketsResponse
 }
 var file_api_proto_loadbalancer_v1_haproxy_status_proto_depIdxs = []int32{
-	3,  // 0: loadbalancer.v1.HaproxyStatusResponse.frontends:type_name -> loadbalancer.v1.HaproxyProxyStatus
-	3,  // 1: loadbalancer.v1.HaproxyStatusResponse.backends:type_name -> loadbalancer.v1.HaproxyProxyStatus
+	4,  // 0: loadbalancer.v1.HaproxyStatusResponse.frontends:type_name -> loadbalancer.v1.HaproxyProxyStatus
+	4,  // 1: loadbalancer.v1.HaproxyStatusResponse.backends:type_name -> loadbalancer.v1.HaproxyProxyStatus
 	1,  // 2: loadbalancer.v1.HaproxyConfiguration.load_balancing_strategy:type_name -> loadbalancer.v1.HaproxyLoadBalancingStrategy
-	6,  // 3: loadbalancer.v1.HaproxyConfiguration.backends:type_name -> loadbalancer.v1.HaproxyBackendTarget
+	7,  // 3: loadbalancer.v1.HaproxyConfiguration.backends:type_name -> loadbalancer.v1.HaproxyBackendTarget
 	0,  // 4: loadbalancer.v1.HaproxyConfiguration.traffic_mode:type_name -> loadbalancer.v1.HaproxyTrafficMode
-	7,  // 5: loadbalancer.v1.HaproxyConfiguration.tls:type_name -> loadbalancer.v1.HaproxyTLSConfiguration
-	5,  // 6: loadbalancer.v1.CreateHaproxyConfigurationRequest.configuration:type_name -> loadbalancer.v1.HaproxyConfiguration
-	5,  // 7: loadbalancer.v1.UpdateHaproxyConfigurationRequest.configuration:type_name -> loadbalancer.v1.HaproxyConfiguration
-	5,  // 8: loadbalancer.v1.ListHaproxyConfigurationsResponse.configurations:type_name -> loadbalancer.v1.HaproxyConfiguration
-	2,  // 9: loadbalancer.v1.HaproxyStatusService.GetStatus:input_type -> loadbalancer.v1.Empty
-	8,  // 10: loadbalancer.v1.HaproxyStatusService.CreateConfiguration:input_type -> loadbalancer.v1.CreateHaproxyConfigurationRequest
-	2,  // 11: loadbalancer.v1.HaproxyStatusService.ListConfigurations:input_type -> loadbalancer.v1.Empty
-	9,  // 12: loadbalancer.v1.HaproxyStatusService.GetConfiguration:input_type -> loadbalancer.v1.GetHaproxyConfigurationRequest
-	10, // 13: loadbalancer.v1.HaproxyStatusService.UpdateConfiguration:input_type -> loadbalancer.v1.UpdateHaproxyConfigurationRequest
-	11, // 14: loadbalancer.v1.HaproxyStatusService.DeleteConfiguration:input_type -> loadbalancer.v1.DeleteHaproxyConfigurationRequest
-	4,  // 15: loadbalancer.v1.HaproxyStatusService.GetStatus:output_type -> loadbalancer.v1.HaproxyStatusResponse
-	5,  // 16: loadbalancer.v1.HaproxyStatusService.CreateConfiguration:output_type -> loadbalancer.v1.HaproxyConfiguration
-	12, // 17: loadbalancer.v1.HaproxyStatusService.ListConfigurations:output_type -> loadbalancer.v1.ListHaproxyConfigurationsResponse
-	5,  // 18: loadbalancer.v1.HaproxyStatusService.GetConfiguration:output_type -> loadbalancer.v1.HaproxyConfiguration
-	5,  // 19: loadbalancer.v1.HaproxyStatusService.UpdateConfiguration:output_type -> loadbalancer.v1.HaproxyConfiguration
-	2,  // 20: loadbalancer.v1.HaproxyStatusService.DeleteConfiguration:output_type -> loadbalancer.v1.Empty
-	15, // [15:21] is the sub-list for method output_type
-	9,  // [9:15] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	8,  // 5: loadbalancer.v1.HaproxyConfiguration.tls:type_name -> loadbalancer.v1.HaproxyTLSConfiguration
+	6,  // 6: loadbalancer.v1.CreateHaproxyConfigurationRequest.configuration:type_name -> loadbalancer.v1.HaproxyConfiguration
+	6,  // 7: loadbalancer.v1.UpdateHaproxyConfigurationRequest.configuration:type_name -> loadbalancer.v1.HaproxyConfiguration
+	6,  // 8: loadbalancer.v1.ListHaproxyConfigurationsResponse.configurations:type_name -> loadbalancer.v1.HaproxyConfiguration
+	2,  // 9: loadbalancer.v1.SocketConnection.state:type_name -> loadbalancer.v1.SocketState
+	2,  // 10: loadbalancer.v1.SocketsByState.state:type_name -> loadbalancer.v1.SocketState
+	14, // 11: loadbalancer.v1.SocketsByState.connections:type_name -> loadbalancer.v1.SocketConnection
+	15, // 12: loadbalancer.v1.GetNetworkSocketsResponse.sockets_by_state:type_name -> loadbalancer.v1.SocketsByState
+	3,  // 13: loadbalancer.v1.HaproxyStatusService.GetStatus:input_type -> loadbalancer.v1.Empty
+	9,  // 14: loadbalancer.v1.HaproxyStatusService.CreateConfiguration:input_type -> loadbalancer.v1.CreateHaproxyConfigurationRequest
+	3,  // 15: loadbalancer.v1.HaproxyStatusService.ListConfigurations:input_type -> loadbalancer.v1.Empty
+	10, // 16: loadbalancer.v1.HaproxyStatusService.GetConfiguration:input_type -> loadbalancer.v1.GetHaproxyConfigurationRequest
+	11, // 17: loadbalancer.v1.HaproxyStatusService.UpdateConfiguration:input_type -> loadbalancer.v1.UpdateHaproxyConfigurationRequest
+	12, // 18: loadbalancer.v1.HaproxyStatusService.DeleteConfiguration:input_type -> loadbalancer.v1.DeleteHaproxyConfigurationRequest
+	3,  // 19: loadbalancer.v1.HaproxyStatusService.GetNetworkSockets:input_type -> loadbalancer.v1.Empty
+	5,  // 20: loadbalancer.v1.HaproxyStatusService.GetStatus:output_type -> loadbalancer.v1.HaproxyStatusResponse
+	6,  // 21: loadbalancer.v1.HaproxyStatusService.CreateConfiguration:output_type -> loadbalancer.v1.HaproxyConfiguration
+	13, // 22: loadbalancer.v1.HaproxyStatusService.ListConfigurations:output_type -> loadbalancer.v1.ListHaproxyConfigurationsResponse
+	6,  // 23: loadbalancer.v1.HaproxyStatusService.GetConfiguration:output_type -> loadbalancer.v1.HaproxyConfiguration
+	6,  // 24: loadbalancer.v1.HaproxyStatusService.UpdateConfiguration:output_type -> loadbalancer.v1.HaproxyConfiguration
+	3,  // 25: loadbalancer.v1.HaproxyStatusService.DeleteConfiguration:output_type -> loadbalancer.v1.Empty
+	16, // 26: loadbalancer.v1.HaproxyStatusService.GetNetworkSockets:output_type -> loadbalancer.v1.GetNetworkSocketsResponse
+	20, // [20:27] is the sub-list for method output_type
+	13, // [13:20] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_loadbalancer_v1_haproxy_status_proto_init() }
@@ -955,8 +1308,8 @@ func file_api_proto_loadbalancer_v1_haproxy_status_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDesc), len(file_api_proto_loadbalancer_v1_haproxy_status_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   11,
+			NumEnums:      3,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

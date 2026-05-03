@@ -17,18 +17,21 @@ import (
 // HaproxyStatusController exposes HAProxy status and configuration gRPC methods.
 type HaproxyStatusController struct {
 	loadbalancerv1.UnimplementedHaproxyStatusServiceServer
-	logger         zerolog.Logger
-	haproxyService *services.HaproxyService
+	logger                zerolog.Logger
+	haproxyService        *services.HaproxyService
+	networkSocketsService *services.NetworkSocketsService
 }
 
 func newHaproxyStatusController(
 	logger zerolog.Logger,
 	haproxyService *services.HaproxyService,
+	networkSocketsService *services.NetworkSocketsService,
 	grpcServer *services.GrpcServerService,
 ) *HaproxyStatusController {
 	controller := &HaproxyStatusController{
-		logger:         logger.With().Str("component", "haproxy_status_controller").Logger(),
-		haproxyService: haproxyService,
+		logger:                logger.With().Str("component", "haproxy_status_controller").Logger(),
+		haproxyService:        haproxyService,
+		networkSocketsService: networkSocketsService,
 	}
 
 	grpcServer.RegisterGrpcService(func(registrar grpc.ServiceRegistrar) {
@@ -166,6 +169,11 @@ func (c *HaproxyStatusController) DeleteConfiguration(ctx context.Context, reque
 	}
 
 	return &loadbalancerv1.Empty{}, nil
+}
+
+// GetNetworkSockets returns information about all network socket connections on the service.
+func (c *HaproxyStatusController) GetNetworkSockets(ctx context.Context, _ *loadbalancerv1.Empty) (*loadbalancerv1.GetNetworkSocketsResponse, error) {
+	return c.networkSocketsService.GetNetworkSockets(ctx)
 }
 
 func toProtoStatusList(items []services.HaproxyProxyStatus) []*loadbalancerv1.HaproxyProxyStatus {

@@ -12,6 +12,7 @@ var Module = fx.Module("services",
 	fx.Provide(configstore.NewConfigStore[haproxycfg.HaproxyConfiguration]),
 	fx.Provide(newHealthService),
 	fx.Provide(newHaproxyService),
+	fx.Provide(newNetworkSocketsService),
 	// GRPC server options providers
 	fx.Provide(
 		fx.Annotate(

@@ -57,14 +57,14 @@ if ! command -v grpcurl >/dev/null 2>&1; then
 fi
 
 if [[ "$SKIP_UNIT" -eq 0 ]]; then
-  echo "[1/8] Running Go unit tests..."
+  echo "[1/9] Running Go unit tests..."
   go test -v ./...
 fi
 
-echo "[2/8] Checking gRPC connectivity..."
+echo "[2/9] Checking gRPC connectivity..."
 grpcurl -plaintext "$GRPC_TARGET" list loadbalancer.v1.HaproxyStatusService >/dev/null
 
-echo "[3/8] Creating HAProxy configuration (HTTP mode)..."
+echo "[3/9] Creating HAProxy configuration (HTTP mode)..."
 grpcurl -plaintext -d '{
   "configuration": {
     "name": "e2e-http",
@@ -84,11 +84,11 @@ grpcurl -plaintext -d '{
   }
 }' "$GRPC_TARGET" loadbalancer.v1.HaproxyStatusService/CreateConfiguration >/dev/null
 
-echo "[4/8] Verifying created configuration exists..."
+echo "[4/9] Verifying created configuration exists..."
 LIST_OUTPUT="$(grpcurl -plaintext -d '{}' "$GRPC_TARGET" loadbalancer.v1.HaproxyStatusService/ListConfigurations)"
 printf '%s' "$LIST_OUTPUT" | grep -q '"name": "e2e-http"'
 
-echo "[5/8] Running HTTP traffic checks..."
+echo "[5/9] Running HTTP traffic checks..."
 for i in 1 2 3 4 5; do
   code="$(curl -s -o /dev/null -w '%{http_code}' "$HTTP_TARGET")"
   if [[ "$code" != "200" ]]; then
@@ -98,7 +98,23 @@ for i in 1 2 3 4 5; do
   echo "  request $i -> HTTP $code"
 done
 
-echo "[6/8] Running negative test (invalid configuration should fail)..."
+echo "[6/9] Verifying network sockets are grouped by state..."
+SOCKETS_OUTPUT="$(grpcurl -plaintext -d '{}' "$GRPC_TARGET" loadbalancer.v1.HaproxyStatusService/GetNetworkSockets)"
+if ! printf '%s' "$SOCKETS_OUTPUT" | grep -q '"socketsByState":'; then
+  echo "ERROR: expected 'socketsByState' field in GetNetworkSockets response" >&2
+  exit 1
+fi
+if ! printf '%s' "$SOCKETS_OUTPUT" | grep -q '"count":'; then
+  echo "ERROR: expected grouped socket entries with 'count' in GetNetworkSockets response" >&2
+  exit 1
+fi
+
+cat << EOT
+Got output from GetNetworkSockets:
+${SOCKETS_OUTPUT}
+EOT
+
+echo "[7/9] Running negative test (invalid configuration should fail)..."
 if grpcurl -plaintext -d '{
   "configuration": {
     "name": "invalid-config",
@@ -112,10 +128,10 @@ if grpcurl -plaintext -d '{
   exit 1
 fi
 
-echo "[7/8] Deleting test configuration..."
+echo "[8/9] Deleting test configuration..."
 grpcurl -plaintext -d '{"name":"e2e-http"}' "$GRPC_TARGET" loadbalancer.v1.HaproxyStatusService/DeleteConfiguration >/dev/null
 
-echo "[8/8] Ensuring cleanup is complete..."
+echo "[9/9] Ensuring cleanup is complete..."
 LIST_OUTPUT_AFTER="$(grpcurl -plaintext -d '{}' "$GRPC_TARGET" loadbalancer.v1.HaproxyStatusService/ListConfigurations)"
 if printf '%s' "$LIST_OUTPUT_AFTER" | grep -q '"name": "e2e-http"'; then
   echo "ERROR: configuration cleanup failed, e2e-http still present" >&2

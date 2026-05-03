@@ -86,6 +86,49 @@ message ListHaproxyConfigurationsResponse {
   repeated HaproxyConfiguration configurations = 1;
 }
 
+// Socket state enum
+enum SocketState {
+  SOCKET_STATE_UNSPECIFIED = 0;
+  SOCKET_STATE_ESTABLISHED = 1;
+  SOCKET_STATE_SYN_SENT = 2;
+  SOCKET_STATE_SYN_RECV = 3;
+  SOCKET_STATE_FIN_WAIT1 = 4;
+  SOCKET_STATE_FIN_WAIT2 = 5;
+  SOCKET_STATE_TIME_WAIT = 6;
+  SOCKET_STATE_CLOSED = 7;
+  SOCKET_STATE_CLOSE_WAIT = 8;
+  SOCKET_STATE_LAST_ACK = 9;
+  SOCKET_STATE_LISTEN = 10;
+  SOCKET_STATE_CLOSING = 11;
+}
+
+// Information about a network socket connection
+message SocketConnection {
+  string local_address = 1;
+  uint32 local_port = 2;
+  string remote_address = 3;
+  uint32 remote_port = 4;
+  SocketState state = 5;
+  uint32 uid = 6;
+  uint32 inode = 7;
+}
+
+// Sockets grouped by state
+message SocketsByState {
+  SocketState state = 1;
+  repeated SocketConnection connections = 2;
+  int32 count = 3;
+}
+
+// Response containing all network socket connections grouped by state
+message GetNetworkSocketsResponse {
+  repeated SocketsByState sockets_by_state = 1;
+  int32 total_sockets = 2;
+  int32 established_count = 3;
+  int32 listen_count = 4;
+  int32 time_wait_count = 5;
+}
+
 service HaproxyStatusService {
   rpc GetStatus(Empty) returns (HaproxyStatusResponse);
   rpc CreateConfiguration(CreateHaproxyConfigurationRequest) returns (HaproxyConfiguration);
@@ -93,4 +136,5 @@ service HaproxyStatusService {
   rpc GetConfiguration(GetHaproxyConfigurationRequest) returns (HaproxyConfiguration);
   rpc UpdateConfiguration(UpdateHaproxyConfigurationRequest) returns (HaproxyConfiguration);
   rpc DeleteConfiguration(DeleteHaproxyConfigurationRequest) returns (Empty);
+  rpc GetNetworkSockets(Empty) returns (GetNetworkSocketsResponse);
 }
