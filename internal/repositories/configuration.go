@@ -39,8 +39,24 @@ type GrpcConfiguration struct {
 
 // HaproxyConfiguration stores HAProxy runtime and file settings.
 type HaproxyConfiguration struct {
-	ConfigurationFile string                     `yaml:"configuration_file"`
-	Socket            HaproxySocketConfiguration `yaml:"socket"`
+	InstanceName               string                                    `yaml:"instance_name"`
+	ConfigurationFile          string                                    `yaml:"configuration_file"`
+	Socket                     HaproxySocketConfiguration                `yaml:"socket"`
+	ManagedConfigurationsStore HaproxyManagedConfigurationsStoreSettings `yaml:"managed_configurations_store"`
+}
+
+// HaproxyManagedConfigurationsStoreSettings stores managed configuration persistence settings.
+type HaproxyManagedConfigurationsStoreSettings struct {
+	Backend string                                    `yaml:"backend"`
+	Redis   HaproxyManagedConfigurationsRedisSettings `yaml:"redis"`
+}
+
+// HaproxyManagedConfigurationsRedisSettings stores Redis managed configuration persistence settings.
+type HaproxyManagedConfigurationsRedisSettings struct {
+	Address  string `yaml:"address"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
 }
 
 // HaproxySocketConfiguration stores HAProxy admin socket connection settings.

@@ -7,6 +7,7 @@ import (
 // Module wires service dependencies into the Fx application.
 var Module = fx.Module("services",
 	fx.Provide(NewLogger),
+	fx.Provide(newManagedConfigurationStore),
 	fx.Provide(newHealthService),
 	fx.Provide(newHaproxyService),
 	// GRPC server options providers

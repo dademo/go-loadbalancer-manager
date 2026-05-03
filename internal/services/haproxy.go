@@ -45,6 +45,7 @@ type HaproxyProxyStatus struct {
 type HaproxyService struct {
 	logger               zerolog.Logger
 	configurationService repositories.AppConfigurationService
+	configurationStore   ManagedConfigurationStore
 	mu                   sync.RWMutex
 	client               runtime.Runtime
 	configurationFile    string
@@ -115,11 +116,13 @@ const (
 func newHaproxyService(
 	logger zerolog.Logger,
 	configurationService repositories.AppConfigurationService,
+	configurationStore ManagedConfigurationStore,
 	lifecycle fx.Lifecycle,
 ) *HaproxyService {
 	service := &HaproxyService{
 		logger:               logger.With().Str("component", "haproxy_service").Logger(),
 		configurationService: configurationService,
+		configurationStore:   configurationStore,
 		mu:                   sync.RWMutex{},
 	}
 
@@ -183,7 +186,7 @@ func (s *HaproxyService) CreateConfiguration(ctx context.Context, configuration 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	configurations, err := s.loadConfigurationsLocked()
+	configurations, err := s.loadConfigurationsLocked(ctx)
 	if err != nil {
 		return HaproxyConfiguration{}, err
 	}
@@ -200,7 +203,7 @@ func (s *HaproxyService) CreateConfiguration(ctx context.Context, configuration 
 	stored.TrafficMode = normalizeTrafficMode(stored.TrafficMode)
 	configurations = append(configurations, stored)
 
-	if err := s.persistAndReloadLocked(configurations); err != nil {
+	if err := s.persistAndReloadLocked(ctx, configurations); err != nil {
 		return HaproxyConfiguration{}, err
 	}
 
@@ -208,11 +211,11 @@ func (s *HaproxyService) CreateConfiguration(ctx context.Context, configuration 
 }
 
 // ListConfigurations returns all managed HAProxy configurations ordered by name.
-func (s *HaproxyService) ListConfigurations(_ context.Context) []HaproxyConfiguration {
+func (s *HaproxyService) ListConfigurations(ctx context.Context) []HaproxyConfiguration {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	configurations, err := s.loadConfigurationsLocked()
+	configurations, err := s.loadConfigurationsLocked(ctx)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Unable to load HAProxy managed configurations")
 		return []HaproxyConfiguration{}
@@ -230,7 +233,7 @@ func (s *HaproxyService) ListConfigurations(_ context.Context) []HaproxyConfigur
 }
 
 // GetConfiguration returns a managed HAProxy configuration by name.
-func (s *HaproxyService) GetConfiguration(_ context.Context, name string) (HaproxyConfiguration, error) {
+func (s *HaproxyService) GetConfiguration(ctx context.Context, name string) (HaproxyConfiguration, error) {
 	key, err := normalizeAndValidateConfigurationName(name)
 	if err != nil {
 		return HaproxyConfiguration{}, err
@@ -239,7 +242,7 @@ func (s *HaproxyService) GetConfiguration(_ context.Context, name string) (Hapro
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	configurations, err := s.loadConfigurationsLocked()
+	configurations, err := s.loadConfigurationsLocked(ctx)
 	if err != nil {
 		return HaproxyConfiguration{}, err
 	}
@@ -268,7 +271,7 @@ func (s *HaproxyService) UpdateConfiguration(ctx context.Context, configuration 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	configurations, err := s.loadConfigurationsLocked()
+	configurations, err := s.loadConfigurationsLocked(ctx)
 	if err != nil {
 		return HaproxyConfiguration{}, err
 	}
@@ -290,7 +293,7 @@ func (s *HaproxyService) UpdateConfiguration(ctx context.Context, configuration 
 	updated.TrafficMode = normalizeTrafficMode(updated.TrafficMode)
 	configurations[index] = updated
 
-	if err := s.persistAndReloadLocked(configurations); err != nil {
+	if err := s.persistAndReloadLocked(ctx, configurations); err != nil {
 		return HaproxyConfiguration{}, err
 	}
 
@@ -311,7 +314,7 @@ func (s *HaproxyService) DeleteConfiguration(ctx context.Context, name string) e
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	configurations, err := s.loadConfigurationsLocked()
+	configurations, err := s.loadConfigurationsLocked(ctx)
 	if err != nil {
 		return err
 	}
@@ -328,7 +331,7 @@ func (s *HaproxyService) DeleteConfiguration(ctx context.Context, name string) e
 	}
 
 	configurations = append(configurations[:index], configurations[index+1:]...)
-	if err := s.persistAndReloadLocked(configurations); err != nil {
+	if err := s.persistAndReloadLocked(ctx, configurations); err != nil {
 		return err
 	}
 
@@ -342,6 +345,11 @@ func (s *HaproxyService) onStart(ctx context.Context) error {
 		return err
 	}
 
+	if err := s.syncManagedConfigurationsFromStore(ctx); err != nil {
+		s.logger.Error().Err(err).Msg("Unable to synchronize HAProxy managed configurations from cache")
+		return err
+	}
+
 	s.logger.Info().Str("configuration_file", s.configurationFile).Msg("HAProxy runtime client initialized")
 	return nil
 }
@@ -350,6 +358,9 @@ func (s *HaproxyService) onStop(_ context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.client = nil
+	if redisStore, ok := s.configurationStore.(*RedisManagedConfigurationStore); ok {
+		_ = redisStore.client.Close()
+	}
 	return nil
 }
 
@@ -379,6 +390,10 @@ func (s *HaproxyService) getOrCreateClient(ctx context.Context) (runtime.Runtime
 	if strings.TrimSpace(configuration.Haproxy.Socket.Address) == "" {
 		return nil, errors.New("invalid haproxy socket address: value is required")
 	}
+	instanceName := strings.TrimSpace(configuration.Haproxy.InstanceName)
+	if instanceName == "" {
+		return nil, errors.New("invalid haproxy.instance_name: value is required")
+	}
 	if strings.TrimSpace(configuration.Haproxy.ConfigurationFile) == "" {
 		return nil, errors.New("invalid haproxy configuration_file: value is required")
 	}
@@ -400,7 +415,37 @@ func (s *HaproxyService) getOrCreateClient(ctx context.Context) (runtime.Runtime
 	return s.client, nil
 }
 
-func (s *HaproxyService) loadConfigurationsLocked() ([]HaproxyConfiguration, error) {
+func (s *HaproxyService) loadConfigurationsLocked(ctx context.Context) ([]HaproxyConfiguration, error) {
+	configurations, err := s.configurationStore.List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load managed configurations from %s store (%s): %w", s.configurationStore.Type(), s.configurationStore.Namespace(), err)
+	}
+	if len(configurations) > 0 {
+		return configurations, nil
+	}
+
+	fileConfigurations, err := s.loadConfigurationsFromFileLocked()
+	if err != nil {
+		return nil, err
+	}
+	if len(fileConfigurations) == 0 {
+		return []HaproxyConfiguration{}, nil
+	}
+
+	if err := s.configurationStore.Save(ctx, fileConfigurations); err != nil {
+		return nil, fmt.Errorf("unable to seed %s store (%s) from HAProxy managed block: %w", s.configurationStore.Type(), s.configurationStore.Namespace(), err)
+	}
+
+	s.logger.Info().
+		Int("count", len(fileConfigurations)).
+		Str("store", s.configurationStore.Type()).
+		Str("namespace", s.configurationStore.Namespace()).
+		Msg("Seeded managed configuration store from HAProxy managed block")
+
+	return fileConfigurations, nil
+}
+
+func (s *HaproxyService) loadConfigurationsFromFileLocked() ([]HaproxyConfiguration, error) {
 	fileContent, err := os.ReadFile(s.configurationFile)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read HAProxy configuration file %q: %w", s.configurationFile, err)
@@ -434,7 +479,11 @@ func (s *HaproxyService) loadConfigurationsLocked() ([]HaproxyConfiguration, err
 	return configurations, nil
 }
 
-func (s *HaproxyService) persistAndReloadLocked(configurations []HaproxyConfiguration) error {
+func (s *HaproxyService) persistAndReloadLocked(ctx context.Context, configurations []HaproxyConfiguration) error {
+	return s.persistAndReloadLockedWithStorePolicy(ctx, configurations, true)
+}
+
+func (s *HaproxyService) persistAndReloadLockedWithStorePolicy(ctx context.Context, configurations []HaproxyConfiguration, persistStore bool) error {
 	// Ensure certificate PEM data is written to files and paths are updated
 	for i := range configurations {
 		if err := s.ensureCertificatePath(&configurations[i]); err != nil {
@@ -461,6 +510,13 @@ func (s *HaproxyService) persistAndReloadLocked(configurations []HaproxyConfigur
 		return fmt.Errorf("unable to write HAProxy configuration file %q: %w", s.configurationFile, err)
 	}
 
+	if persistStore {
+		if err := s.configurationStore.Save(ctx, configurations); err != nil {
+			_ = os.WriteFile(s.configurationFile, before, stat.Mode().Perm())
+			return fmt.Errorf("unable to persist managed configurations to %s store (%s): %w", s.configurationStore.Type(), s.configurationStore.Namespace(), err)
+		}
+	}
+
 	logs, err := s.client.Reload()
 	if err != nil {
 		_ = os.WriteFile(s.configurationFile, before, stat.Mode().Perm())
@@ -473,6 +529,35 @@ func (s *HaproxyService) persistAndReloadLocked(configurations []HaproxyConfigur
 	if strings.TrimSpace(logs) != "" {
 		s.logger.Debug().Str("logs", logs).Msg("HAProxy reload output")
 	}
+
+	return nil
+}
+
+func (s *HaproxyService) syncManagedConfigurationsFromStore(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	configurations, err := s.configurationStore.List(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to list managed configurations from %s store (%s): %w", s.configurationStore.Type(), s.configurationStore.Namespace(), err)
+	}
+	if len(configurations) == 0 {
+		s.logger.Debug().
+			Str("store", s.configurationStore.Type()).
+			Str("namespace", s.configurationStore.Namespace()).
+			Msg("No managed configurations found in cache; skipping HAProxy cache synchronization")
+		return nil
+	}
+
+	if err := s.persistAndReloadLockedWithStorePolicy(ctx, configurations, false); err != nil {
+		return fmt.Errorf("unable to synchronize HAProxy managed configurations from cache: %w", err)
+	}
+
+	s.logger.Info().
+		Int("count", len(configurations)).
+		Str("store", s.configurationStore.Type()).
+		Str("namespace", s.configurationStore.Namespace()).
+		Msg("Synchronized HAProxy managed configurations from cache")
 
 	return nil
 }

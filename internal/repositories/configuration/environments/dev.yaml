@@ -1,6 +1,14 @@
 haproxy:
+  instance_name: "lbm-dev"
   configuration_file: "./tmp/haproxy/haproxy.cfg"
   socket:
     network: "unix"
     address: "./tmp/haproxy/master.sock"
     timeout: "3s"
+  managed_configurations_store:
+    backend: "redis"
+    redis:
+      address: "localhost:6379"
+      username: ""
+      password: ""
+      db: 0

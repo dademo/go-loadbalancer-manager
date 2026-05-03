@@ -5,6 +5,7 @@ go 1.26
 require (
 	github.com/haproxytech/client-native/v6 v6.3.5
 	github.com/ipfans/fxlogger v0.2.0
+	github.com/redis/go-redis/v9 v9.16.0
 	github.com/rs/zerolog v1.33.0
 	go.uber.org/fx v1.23.0
 	google.golang.org/grpc v1.80.0
@@ -13,6 +14,8 @@ require (
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-openapi/analysis v0.25.0 // indirect
 	github.com/go-openapi/errors v0.22.7 // indirect
 	github.com/go-openapi/jsonpointer v0.22.5 // indirect
