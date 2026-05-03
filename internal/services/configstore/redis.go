@@ -3,6 +3,7 @@ package configstore
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -52,10 +53,11 @@ func newRedisStore[T any](
 	}, nil
 }
 
+// List returns all stored configurations from Redis.
 func (s *RedisStore[T]) List(ctx context.Context) ([]T, error) {
 	payload, err := s.client.Get(ctx, s.redisKey).Bytes()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return []T{}, nil
 		}
 		return nil, fmt.Errorf("unable to read managed configurations from redis key %q: %w", s.redisKey, err)
@@ -69,6 +71,7 @@ func (s *RedisStore[T]) List(ctx context.Context) ([]T, error) {
 	return items, nil
 }
 
+// Save writes all configurations to Redis.
 func (s *RedisStore[T]) Save(ctx context.Context, configurations []T) error {
 	payload, err := json.Marshal(configurations)
 	if err != nil {
@@ -82,10 +85,12 @@ func (s *RedisStore[T]) Save(ctx context.Context, configurations []T) error {
 	return nil
 }
 
+// Type returns the backend type identifier.
 func (s *RedisStore[T]) Type() string {
 	return BackendRedis
 }
 
+// Namespace returns the store namespace.
 func (s *RedisStore[T]) Namespace() string {
 	return s.namespace
 }

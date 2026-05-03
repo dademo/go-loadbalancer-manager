@@ -10,11 +10,12 @@ func RenderBackendSection(configuration HaproxyConfiguration) []string {
 	trafficMode := NormalizeTrafficMode(configuration.TrafficMode)
 	loadBalancing := NormalizeLoadBalancingStrategy(configuration.LoadBalancing)
 
-	lines := []string{
+	lines := make([]string, 0, 3+len(configuration.Backends))
+	lines = append(lines,
 		fmt.Sprintf("backend %s", configuration.BackendName),
 		fmt.Sprintf("    mode %s", trafficMode),
 		fmt.Sprintf("    balance %s", loadBalancing),
-	}
+	)
 
 	for _, backend := range configuration.Backends {
 		serverLine := fmt.Sprintf(

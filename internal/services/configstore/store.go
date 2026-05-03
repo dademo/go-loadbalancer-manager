@@ -13,8 +13,10 @@ import (
 )
 
 const (
+	// BackendMemory stores managed configurations in-process.
 	BackendMemory = "memory"
-	BackendRedis  = "redis"
+	// BackendRedis stores managed configurations in Redis.
+	BackendRedis = "redis"
 
 	backendType = "haproxy"
 )
@@ -24,8 +26,8 @@ var namespaceSanitizer = regexp.MustCompile(`[^a-z0-9_-]`)
 // Store persists managed configurations of type T.
 // T must be JSON-serializable.
 type Store[T any] interface {
-	List(context.Context) ([]T, error)
-	Save(context.Context, []T) error
+	List(ctx context.Context) ([]T, error)
+	Save(ctx context.Context, configurations []T) error
 	Type() string
 	Namespace() string
 }

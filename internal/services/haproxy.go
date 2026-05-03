@@ -20,10 +20,10 @@ import (
 	"go.uber.org/fx"
 )
 
-// HaproxyStatus contains grouped HAProxy runtime stats.
-
 // ManagedConfigurationStore is the configuration store type used by HaproxyService.
 type ManagedConfigurationStore = configstore.Store[haproxycfg.HaproxyConfiguration]
+
+// HaproxyStatus contains grouped HAProxy runtime stats.
 type HaproxyStatus struct {
 	Frontends []HaproxyProxyStatus `json:"frontends"`
 	Backends  []HaproxyProxyStatus `json:"backends"`
@@ -42,9 +42,13 @@ type HaproxyProxyStatus struct {
 	LastChange int64  `json:"last_change"`
 }
 
-// Type aliases — allow callers to keep using services.HaproxyConfiguration etc.
+// HaproxyConfiguration aliases the managed HAProxy configuration type.
 type HaproxyConfiguration = haproxycfg.HaproxyConfiguration
+
+// HaproxyBackendTarget aliases one backend target entry.
 type HaproxyBackendTarget = haproxycfg.HaproxyBackendTarget
+
+// HaproxyTLSConfiguration aliases TLS options for HAProxy configuration.
 type HaproxyTLSConfiguration = haproxycfg.HaproxyTLSConfiguration
 
 // Error re-exports for backward compatibility.

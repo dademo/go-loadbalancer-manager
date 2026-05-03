@@ -22,6 +22,7 @@ func newInMemoryStore[T any](logger zerolog.Logger, namespace string) Store[T] {
 	}
 }
 
+// List returns a copy of the currently stored configurations.
 func (s *InMemoryStore[T]) List(_ context.Context) ([]T, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -31,6 +32,7 @@ func (s *InMemoryStore[T]) List(_ context.Context) ([]T, error) {
 	return result, nil
 }
 
+// Save replaces the currently stored configurations.
 func (s *InMemoryStore[T]) Save(_ context.Context, configurations []T) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -41,10 +43,12 @@ func (s *InMemoryStore[T]) Save(_ context.Context, configurations []T) error {
 	return nil
 }
 
+// Type returns the backend type identifier.
 func (s *InMemoryStore[T]) Type() string {
 	return BackendMemory
 }
 
+// Namespace returns the store namespace.
 func (s *InMemoryStore[T]) Namespace() string {
 	return s.namespace
 }

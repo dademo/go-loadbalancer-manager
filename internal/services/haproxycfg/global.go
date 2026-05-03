@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Managed HAProxy configuration block markers.
 const (
 	ManagedBlockStart = "# BEGIN LBM MANAGED CONFIGURATIONS"
 	ManagedBlockEnd   = "# END LBM MANAGED CONFIGURATIONS"
