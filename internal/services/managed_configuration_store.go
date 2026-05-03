@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"dademo.fr/loadbalancer-manager/internal/repositories"
+	"dademo.fr/loadbalancer-manager/internal/services/haproxycfg"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 )
@@ -112,7 +113,7 @@ func (s *InMemoryManagedConfigurationStore) List(_ context.Context) ([]HaproxyCo
 
 	items := make([]HaproxyConfiguration, 0, len(s.configurations))
 	for _, configuration := range s.configurations {
-		items = append(items, cloneConfiguration(configuration))
+		items = append(items, haproxycfg.CloneConfiguration(configuration))
 	}
 
 	sort.Slice(items, func(i, j int) bool {
@@ -128,8 +129,8 @@ func (s *InMemoryManagedConfigurationStore) Save(_ context.Context, configuratio
 
 	next := make(map[string]HaproxyConfiguration, len(configurations))
 	for _, configuration := range configurations {
-		cloned := cloneConfiguration(configuration)
-		cloned.Name = normalizeConfigurationName(cloned.Name)
+		cloned := haproxycfg.CloneConfiguration(configuration)
+		cloned.Name = haproxycfg.NormalizeConfigurationName(cloned.Name)
 		next[cloned.Name] = cloned
 	}
 
@@ -160,7 +161,7 @@ func (s *RedisManagedConfigurationStore) List(ctx context.Context) ([]HaproxyCon
 		if err := json.Unmarshal([]byte(payload), &configuration); err != nil {
 			return nil, fmt.Errorf("unable to decode redis managed configuration %q from key %q: %w", name, s.redisKey, err)
 		}
-		configuration.Name = normalizeConfigurationName(configuration.Name)
+		configuration.Name = haproxycfg.NormalizeConfigurationName(configuration.Name)
 		items = append(items, configuration)
 	}
 
@@ -178,8 +179,8 @@ func (s *RedisManagedConfigurationStore) Save(ctx context.Context, configuration
 	if len(configurations) > 0 {
 		values := make(map[string]any, len(configurations))
 		for _, configuration := range configurations {
-			cloned := cloneConfiguration(configuration)
-			cloned.Name = normalizeConfigurationName(cloned.Name)
+			cloned := haproxycfg.CloneConfiguration(configuration)
+			cloned.Name = haproxycfg.NormalizeConfigurationName(cloned.Name)
 
 			payload, err := json.Marshal(cloned)
 			if err != nil {
