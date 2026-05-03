@@ -2,7 +2,13 @@
 
 APP_NAME := go-loadbalancer-manager
 DIST_DIR := dist
-IMAGE_NAME := $(APP_NAME):latest
+APP_IMAGE_NAME ?= $(APP_NAME):latest
+HAPROXY_IMAGE_NAME ?= $(APP_NAME)-haproxy:latest
+APP_CONTAINERFILE ?= .devops/container/app/Containerfile
+HAPROXY_CONTAINERFILE ?= .devops/container/haproxy/Containerfile
+HAPROXY_SOURCE_CONFIG ?= .devops/container/haproxy/haproxy.cfg
+HAPROXY_RUNTIME_DIR ?= tmp/haproxy
+HAPROXY_RUNTIME_CONFIG ?= $(HAPROXY_RUNTIME_DIR)/haproxy.cfg
 CONTAINER_RUNTIME ?= podman
 COMPOSE_RUNTIME ?= podman-compose
 VERSION_FILE ?= VERSION
@@ -90,13 +96,23 @@ version: ## Print resolved build version
 ##@ Build & Extract
 
 .PHONY: build
-build: ## Build the multi-layered container image
-	DOCKER_BUILDKIT=1 $(CONTAINER_RUNTIME) build -t $(IMAGE_NAME) -f .devops/container/Containerfile .
+build: build-app ## Build the app container image (backward compatible target)
+
+.PHONY: build-app
+build-app: ## Build the app container image
+	DOCKER_BUILDKIT=1 $(CONTAINER_RUNTIME) build -t $(APP_IMAGE_NAME) -f $(APP_CONTAINERFILE) .
+
+.PHONY: build-haproxy
+build-haproxy: ## Build the HAProxy image with embedded base config
+	DOCKER_BUILDKIT=1 $(CONTAINER_RUNTIME) build -t $(HAPROXY_IMAGE_NAME) -f $(HAPROXY_CONTAINERFILE) .
+
+.PHONY: build-all
+build-all: build-app build-haproxy ## Build app + HAProxy images (docker-bake equivalent)
 
 .PHONY: extract
 extract: build ## Build image and extract the binary to dist/
 	@mkdir -p $(DIST_DIR)
-	@id=$$($(CONTAINER_RUNTIME) create $(IMAGE_NAME)); \
+	@id=$$($(CONTAINER_RUNTIME) create $(APP_IMAGE_NAME)); \
 	$(CONTAINER_RUNTIME) cp $$id:/$(APP_NAME) $(DIST_DIR)/$(APP_NAME); \
 	$(CONTAINER_RUNTIME) rm -v $$id > /dev/null
 	@echo "Extracted to $(DIST_DIR)/$(APP_NAME)"
@@ -109,8 +125,16 @@ clean: ## Clean up local dist artifacts and caches
 
 ##@ Docker Compose (Test Environment)
 
+.PHONY: compose-prepare
+compose-prepare: ## Prepare local compose runtime directories
+	@mkdir -p $(HAPROXY_RUNTIME_DIR)
+	@if [ ! -f $(HAPROXY_RUNTIME_CONFIG) ]; then \
+		cp $(HAPROXY_SOURCE_CONFIG) $(HAPROXY_RUNTIME_CONFIG); \
+		echo "Initialized local HAProxy config: ./$(HAPROXY_RUNTIME_CONFIG)"; \
+	fi
+
 .PHONY: compose-up
-compose-up: ## Start HAProxy + backends $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml environment
+compose-up: compose-prepare build-haproxy ## Start HAProxy + backends $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml environment
 	$(COMPOSE_RUNTIME) -f .devops/compose/compose.yml up -d
 
 .PHONY: compose-down
@@ -127,11 +151,11 @@ compose-ps: ## Show running $(COMPOSE_RUNTIME) -f .devops/compose/compose.yml se
 
 .PHONY: compose-stats
 compose-stats: ## Check HAProxy admin socket status (no HTTP /stats by default)
-	@if [ -S ./tmp/haproxy/admin.sock ]; then \
-		echo "HAProxy admin socket is available: ./tmp/haproxy/admin.sock"; \
+	@if [ -S ./$(HAPROXY_RUNTIME_DIR)/admin.sock ]; then \
+		echo "HAProxy admin socket is available: ./$(HAPROXY_RUNTIME_DIR)/admin.sock"; \
 		echo "No default HTTP /stats endpoint is configured on :8080."; \
 	else \
-		echo "HAProxy admin socket not found: ./tmp/haproxy/admin.sock"; \
+		echo "HAProxy admin socket not found: ./$(HAPROXY_RUNTIME_DIR)/admin.sock"; \
 		echo "Start dependencies first with: make compose-up"; \
 		exit 1; \
 	fi

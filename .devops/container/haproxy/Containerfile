@@ -1,0 +1,5 @@
+FROM haproxy:2.8-alpine
+
+COPY .devops/container/haproxy/haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+
+CMD ["-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg", "-S", "/var/run/haproxy/master.sock"]

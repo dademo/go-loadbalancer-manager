@@ -73,13 +73,20 @@ services:
 
   # HAProxy with runtime socket, configured by the app
   haproxy:
-    image: haproxy:2.8-alpine
+    image: ${HAPROXY_IMAGE:-go-loadbalancer-manager-haproxy:latest}
     container_name: haproxy
     user: "0:0"
-    command: ["-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg", "-S", "/var/run/haproxy/master.sock"]
+    command:
+      [
+        "-W",
+        "-db",
+        "-f",
+        "/var/run/haproxy/haproxy.cfg",
+        "-S",
+        "/var/run/haproxy/master.sock",
+      ]
     network_mode: host
     volumes:
-      - ${PWD}/.devops/compose/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro,Z
       - ${PWD}/tmp/haproxy:/var/run/haproxy:Z
     depends_on:
       backend-1:

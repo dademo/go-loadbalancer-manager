@@ -58,12 +58,12 @@ This compose configuration creates a complete test environment for the Go load b
 
 ### HAProxy
 
-- **Image**: `haproxy:2.8-alpine`
+- **Image**: `go-loadbalancer-manager-haproxy:latest` (or `HAPROXY_IMAGE` override)
 - **Networks**: Internal (`haproxy-internal`) + Host
 - **Master Socket**: `/var/run/haproxy/master.sock` (used by the Go runtime client)
 - **Admin Socket**: `/var/run/haproxy/admin.sock` (health/admin checks)
 - **HTTP Listener**: Created dynamically by the Go service (example: `http://localhost:8080/`)
-- **Stats Page**: No default HTTP `/stats` endpoint in `.devops/compose/haproxy.cfg`
+- **Stats Page**: No default HTTP `/stats` endpoint in `.devops/container/haproxy/haproxy.cfg`
 - **Load Balancing**: Round-robin across 3 backends
 - **Health Checks**: HTTP health checks on backends
 
@@ -74,6 +74,8 @@ This compose configuration creates a complete test environment for the Go load b
 ```bash
 make compose-up
 ```
+
+This command builds the custom HAProxy image first (if needed). The image embeds `.devops/container/haproxy/haproxy.cfg`, and `make compose-up` initializes `./tmp/haproxy/haproxy.cfg` from that file when missing.
 
 ### 2. Verify Services are Running
 
@@ -161,7 +163,7 @@ stats socket 0.0.0.0:9001 level admin
 
 ### HAProxy Configuration File
 
-See `haproxy.cfg` for details:
+See `haproxy.cfg` for details. Source of truth is `.devops/container/haproxy/haproxy.cfg`; local runtime copy is `./tmp/haproxy/haproxy.cfg`:
 
 - **Global Settings**: Logging, socket configuration, performance tuning
 - **Runtime Access**: Master socket (`/var/run/haproxy/master.sock`)
@@ -232,8 +234,7 @@ make compose-ps
 make compose-logs
 
 # Validate config syntax
-docker run --rm -v $(pwd)/.devops/compose/haproxy.cfg:/haproxy.cfg haproxy:2.8-alpine \
-  haproxy -f /haproxy.cfg -c
+podman run --rm go-loadbalancer-manager-haproxy:latest haproxy -f /usr/local/etc/haproxy/haproxy.cfg -c
 ```
 
 ### Backends Not Responding

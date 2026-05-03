@@ -3,6 +3,7 @@
 Go service to manage HAProxy through gRPC.
 
 The project exposes a gRPC API to:
+
 - read HAProxy status (frontends/backends),
 - create, list, get, update, and delete load-balancing configurations,
 - write managed configurations into a dedicated block in the HAProxy config file.
@@ -10,6 +11,7 @@ The project exposes a gRPC API to:
 ## Overview
 
 Main components:
+
 - `cmd/main.go`: application entrypoint.
 - `internal/controllers`: gRPC handlers.
 - `internal/services`: business logic (HAProxy status, configuration CRUD, validation).
@@ -30,18 +32,23 @@ HAProxy runtime is controlled through the Unix `master.sock` socket.
 ## Configuration
 
 Default configuration:
+
 - `internal/repositories/configuration/default.yaml`
 
 Local dev configuration (used by Air and `LBM_CONFIG_ENV=dev`):
+
 - `internal/repositories/configuration/environments/dev.yaml`
 
 Important paths:
+
 - local HAProxy runtime socket: `./tmp/haproxy/master.sock`
-- local HAProxy config file: `./.devops/compose/haproxy.cfg`
+- local HAProxy config file (runtime, non versioned): `./tmp/haproxy/haproxy.cfg`
+- HAProxy config source of truth (versioned): `./.devops/container/haproxy/haproxy.cfg`
 
 ## Useful Commands
 
 Development:
+
 - `make tidy`: format and tidy dependencies
 - `make lint`: run lint checks
 - `make test`: run unit tests
@@ -50,6 +57,7 @@ Development:
 - `make dev-local`: start compose services, then run Air
 
 Compose (test environment):
+
 - `make compose-up`
 - `make compose-ps`
 - `make compose-logs`
@@ -58,7 +66,10 @@ Compose (test environment):
 - `make compose-clean`
 
 Build:
-- `make build`: build the multi-stage container image
+
+- `make build` or `make build-app`: build the app multi-stage container image
+- `make build-haproxy`: build the HAProxy image with embedded base config
+- `make build-all`: build both app + HAProxy images (docker-bake equivalent, Podman compatible)
 - `make extract`: extract the binary into `dist/`
 
 ## gRPC API
@@ -66,6 +77,7 @@ Build:
 Service: `loadbalancer.v1.HaproxyStatusService`
 
 Exposed RPCs:
+
 - `GetStatus`
 - `CreateConfiguration`
 - `ListConfigurations`
@@ -74,6 +86,7 @@ Exposed RPCs:
 - `DeleteConfiguration`
 
 Full schema:
+
 - `api/proto/loadbalancer/v1/haproxy_status.proto`
 
 ## Recommended Local Workflow
@@ -89,5 +102,8 @@ Full schema:
 
 ## Notes
 
-- `.devops/compose/haproxy.cfg` does not expose an HTTP `/stats` page by default.
+- `.devops/container/haproxy/haproxy.cfg` does not expose an HTTP `/stats` page by default.
 - HTTP traffic on `:8080` appears after creating a frontend dynamically through gRPC configuration.
+- The HAProxy compose service uses a custom image (`go-loadbalancer-manager-haproxy:latest` by default) that embeds `.devops/container/haproxy/haproxy.cfg` at build time.
+- `make compose-up` initializes `./tmp/haproxy/haproxy.cfg` from `.devops/container/haproxy/haproxy.cfg` if missing.
+- `tmp/` is ignored by git, so local runtime config/state remains out of SCM.

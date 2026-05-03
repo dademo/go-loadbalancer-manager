@@ -1,5 +1,5 @@
 haproxy:
-  configuration_file: "./.devops/compose/haproxy.cfg"
+  configuration_file: "./tmp/haproxy/haproxy.cfg"
   socket:
     network: "unix"
     address: "./tmp/haproxy/master.sock"
