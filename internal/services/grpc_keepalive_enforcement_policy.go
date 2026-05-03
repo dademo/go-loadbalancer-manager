@@ -9,22 +9,22 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-type keepaliveEnforcementPolicyOptionService struct {
+type grpcKeepaliveEnforcementPolicyOptionService struct {
 	logger               zerolog.Logger
 	configurationService repositories.AppConfigurationService
 }
 
-func newKeepaliveEnforcementPolicyOptionService(
+func newGrpcKeepaliveEnforcementPolicyOptionService(
 	logger zerolog.Logger,
 	configurationService repositories.AppConfigurationService) GrpcServerOptionsProvider {
 
-	return &keepaliveEnforcementPolicyOptionService{
-		logger:               logger.With().Str("component", "keepalive_enforcement_policy_option_service").Logger(),
+	return &grpcKeepaliveEnforcementPolicyOptionService{
+		logger:               logger.With().Str("component", "grpc_keepalive_enforcement_policy_option_service").Logger(),
 		configurationService: configurationService,
 	}
 }
 
-func (s *keepaliveEnforcementPolicyOptionService) GetOption() (grpc.ServerOption, error) {
+func (s *grpcKeepaliveEnforcementPolicyOptionService) GetOption() (grpc.ServerOption, error) {
 	// configuration, err := s.configurationService.GetConfiguration()
 	_, err := s.configurationService.GetConfiguration()
 	if err != nil {

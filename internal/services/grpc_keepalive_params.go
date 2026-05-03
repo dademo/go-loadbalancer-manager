@@ -9,22 +9,22 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-type keepaliveParamsOptionService struct {
+type grpcKeepaliveParamsOptionService struct {
 	logger               zerolog.Logger
 	configurationService repositories.AppConfigurationService
 }
 
-func newKeepaliveParamsOptionService(
+func newGrpcKeepaliveParamsOptionService(
 	logger zerolog.Logger,
 	configurationService repositories.AppConfigurationService) GrpcServerOptionsProvider {
 
-	return &keepaliveParamsOptionService{
-		logger:               logger.With().Str("component", "keepalive_params_option_service").Logger(),
+	return &grpcKeepaliveParamsOptionService{
+		logger:               logger.With().Str("component", "grpc_keepalive_params_option_service").Logger(),
 		configurationService: configurationService,
 	}
 }
 
-func (s *keepaliveParamsOptionService) GetOption() (grpc.ServerOption, error) {
+func (s *grpcKeepaliveParamsOptionService) GetOption() (grpc.ServerOption, error) {
 	// configuration, err := s.configurationService.GetConfiguration()
 	_, err := s.configurationService.GetConfiguration()
 	if err != nil {

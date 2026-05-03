@@ -22,14 +22,14 @@ var Module = fx.Module("services",
 	),
 	fx.Provide(
 		fx.Annotate(
-			newKeepaliveParamsOptionService,
+			newGrpcKeepaliveParamsOptionService,
 			fx.As(new(GrpcServerOptionsProvider)),
 			fx.ResultTags(`group:"grpc_options"`),
 		),
 	),
 	fx.Provide(
 		fx.Annotate(
-			newKeepaliveEnforcementPolicyOptionService,
+			newGrpcKeepaliveEnforcementPolicyOptionService,
 			fx.As(new(GrpcServerOptionsProvider)),
 			fx.ResultTags(`group:"grpc_options"`),
 		),
