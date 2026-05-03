@@ -74,10 +74,6 @@ run: tidy ## Run the application directly (use ARGS="foo" for params)
 run-dev: tidy ## Run the application directly (use ARGS="foo" for params)
 	LBM_CONFIG_ENV=dev go run ./cmd/main.go $(ARGS)
 
-.PHONY: configure-service
-configure-service: ## Configure and run service locally (use ARGS="--env dev --no-run")
-	./.devops/scripts/configure-service.bash $(ARGS)
-
 .PHONY: test-cases
 test-cases: ## Run functional test cases (requires running service + grpcurl)
 	./.devops/scripts/test-cases.bash $(ARGS)

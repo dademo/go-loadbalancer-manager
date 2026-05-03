@@ -18,7 +18,7 @@ Options:
   -h, --help                   Show this help
 
 Expected prerequisites:
-  1) Service is running (for example via .devops/scripts/configure-service.bash)
+  1) Service is running
   2) HAProxy + backends are running (make compose-up)
   3) grpcurl is installed
 EOF
