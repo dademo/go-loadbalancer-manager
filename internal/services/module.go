@@ -1,13 +1,15 @@
 package services
 
 import (
+	"dademo.fr/loadbalancer-manager/internal/services/configstore"
+	"dademo.fr/loadbalancer-manager/internal/services/haproxycfg"
 	"go.uber.org/fx"
 )
 
 // Module wires service dependencies into the Fx application.
 var Module = fx.Module("services",
 	fx.Provide(NewLogger),
-	fx.Provide(newManagedConfigurationStore),
+	fx.Provide(configstore.NewConfigStore[haproxycfg.HaproxyConfiguration]),
 	fx.Provide(newHealthService),
 	fx.Provide(newHaproxyService),
 	// GRPC server options providers

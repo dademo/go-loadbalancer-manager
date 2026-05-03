@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"dademo.fr/loadbalancer-manager/internal/repositories"
+	"dademo.fr/loadbalancer-manager/internal/services/configstore"
 	"dademo.fr/loadbalancer-manager/internal/services/haproxycfg"
 	"github.com/haproxytech/client-native/v6/models"
 	"github.com/haproxytech/client-native/v6/runtime"
@@ -20,6 +21,9 @@ import (
 )
 
 // HaproxyStatus contains grouped HAProxy runtime stats.
+
+// ManagedConfigurationStore is the configuration store type used by HaproxyService.
+type ManagedConfigurationStore = configstore.Store[haproxycfg.HaproxyConfiguration]
 type HaproxyStatus struct {
 	Frontends []HaproxyProxyStatus `json:"frontends"`
 	Backends  []HaproxyProxyStatus `json:"backends"`
@@ -307,8 +311,8 @@ func (s *HaproxyService) onStop(_ context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.client = nil
-	if redisStore, ok := s.configurationStore.(*RedisManagedConfigurationStore); ok {
-		_ = redisStore.client.Close()
+	if closer, ok := s.configurationStore.(interface{ Close() error }); ok {
+		_ = closer.Close()
 	}
 	return nil
 }
